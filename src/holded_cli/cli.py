@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import inspect
+from functools import wraps
+
+import typer
+
+from holded_cli import __version__
+from holded_cli.commands import (
+    login_command,
+    session_command,
+    track_command,
+    workplaces_command,
+)
+from holded_cli.commands.config import CONFIG_HELP, set_command, show_command
+from holded_cli.console import render_error
+from holded_cli.errors import HoldedCliError
+from holded_cli.state import create_app_state
+
+
+app = typer.Typer(
+    name="holded",
+    help="Holded time-tracking CLI.",
+    invoke_without_command=True,
+    pretty_exceptions_enable=False,
+    pretty_exceptions_show_locals=False,
+)
+config_app = typer.Typer(help=CONFIG_HELP, invoke_without_command=True)
+
+
+def _with_cli_error_handling(command):
+    @wraps(command)
+    def wrapped(*args, **kwargs):  # type: ignore[no-untyped-def]
+        try:
+            return command(*args, **kwargs)
+        except HoldedCliError as error:
+            render_error(error)
+            raise typer.Exit(code=error.exit_code) from None
+
+    wrapped.__signature__ = inspect.signature(command)
+    return wrapped
+
+
+def _version_callback(value: bool) -> None:
+    if not value:
+        return
+
+    typer.echo(__version__)
+    raise typer.Exit()
+
+
+@app.callback()
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show the installed holded version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    """Holded time-tracking CLI."""
+
+    del version
+    ctx.obj = create_app_state()
+
+
+app.command(
+    "login", help="Authenticate with Holded and save the local session cookies."
+)(_with_cli_error_handling(login_command))
+app.command(
+    "session",
+    help="Show saved session status and timestamp.",
+)(_with_cli_error_handling(session_command))
+app.command(
+    "workplaces",
+    help="List available Holded workplace IDs and names.",
+)(_with_cli_error_handling(workplaces_command))
+app.command(
+    "track",
+    help=(
+        "Register working days in Holded for a date range.\n\n"
+        "Example:\n"
+        "  holded track --from 2026-04-01 --to 2026-04-30"
+    ),
+)(_with_cli_error_handling(track_command))
+config_app.command("show")(_with_cli_error_handling(show_command))
+config_app.command("set")(_with_cli_error_handling(set_command))
+
+
+@config_app.callback()
+def _config_callback(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        _with_cli_error_handling(show_command)(ctx)
+
+
+app.add_typer(config_app, name="config")
