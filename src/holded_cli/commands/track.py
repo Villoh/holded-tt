@@ -54,9 +54,7 @@ def _build_pauses(pauses: list[str]) -> list[dict]:
     ]
 
 
-def _build_preview_table(
-    days: list[date], start: str, end: str, pauses: list[str]
-) -> Table:
+def _build_preview_table(days: list[date]) -> Table:
     table = Table(
         show_header=True,
         header_style="bold",
@@ -66,19 +64,8 @@ def _build_preview_table(
     table.add_column("#", style="dim", width=4)
     table.add_column("Date", min_width=12)
     table.add_column("Day", min_width=11, style="dim")
-    table.add_column("Start", min_width=6)
-    table.add_column("End", min_width=6)
-    table.add_column("Pauses", min_width=12, style="dim")
-    pauses_str = ", ".join(pauses) if pauses else "—"
     for i, d in enumerate(days, 1):
-        table.add_row(
-            str(i),
-            d.isoformat(),
-            d.strftime("%A"),
-            start,
-            end,
-            pauses_str,
-        )
+        table.add_row(str(i), d.isoformat(), d.strftime("%A"))
     return table
 
 
@@ -209,9 +196,14 @@ def track_command(
         console.print("No working days found in the specified range.")
         raise typer.Exit(0)
 
-    # --- Show preview table ---
-    table = _build_preview_table(days, effective_start, effective_end, validated_pauses)
-    console.print(table)
+    # --- Show context line + preview table ---
+    pauses_str = "  ·  pause " + ", ".join(validated_pauses) if validated_pauses else ""
+    context_parts = [f"{effective_start} → {effective_end}{pauses_str}"]
+    if effective_workplace:
+        context_parts.append(f"workplace {effective_workplace}")
+    console.print()
+    console.print("[dim]" + "  ·  ".join(context_parts) + "[/dim]")
+    console.print(_build_preview_table(days))
 
     if dry_run:
         console.print(
