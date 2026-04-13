@@ -114,6 +114,19 @@ class HoldedClient:
         data = self._parse_json(response)
         return data if isinstance(data, dict) else {}
 
+    def get_organization_employees(self) -> list[dict[str, Any]]:
+        """Fetch the employee directory for the whole organization."""
+        response = self._get("/internal/teamzone/v2/employees/organization")
+        data = self._parse_json(response)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("employees", "data", "items"):
+                value = data.get(key)
+                if isinstance(value, list):
+                    return value
+        return []
+
     def get_current_tracker(self) -> dict[str, Any] | None:
         """Return the active tracker, or None if there is none."""
         response = self._get("/internal/team/v2/current-tracker")

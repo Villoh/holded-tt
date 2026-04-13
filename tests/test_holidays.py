@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 from datetime import date
+import importlib
+import sys
 from pathlib import Path
 
 
@@ -194,6 +196,23 @@ def test_current_year_paris_returns_plausible_year() -> None:
 
     assert isinstance(year, int)
     assert 2020 <= year <= 2100
+
+
+def test_holidays_falls_back_to_utc_when_paris_timezone_is_unavailable(
+    monkeypatch,
+) -> None:
+    import zoneinfo
+
+    sys.modules.pop("holded_cli.holidays", None)
+    monkeypatch.setattr(
+        zoneinfo,
+        "ZoneInfo",
+        lambda key: (_ for _ in ()).throw(zoneinfo.ZoneInfoNotFoundError(key)),
+    )
+
+    holidays = importlib.import_module("holded_cli.holidays")
+
+    assert holidays._PARIS_TZ == holidays.timezone.utc
 
 
 def test_fetch_holidays_fetches_from_api_when_cache_absent(tmp_path: Path) -> None:

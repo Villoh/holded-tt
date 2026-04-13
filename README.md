@@ -39,11 +39,9 @@ holded login
 # 2. Check your workplace ID
 holded workplaces
 
-# Optional: inspect your profile
+# Optional: inspect your profile and organization directory
 holded employee
-# aliases
-holded me
-holded whoami
+holded organization
 
 # 3. Save your defaults
 holded config set defaults.workplace_id <id>
@@ -106,12 +104,17 @@ holded workplaces
 ### `holded employee`
 Shows your merged employee profile by combining the Holded employee and personal-info endpoints.
 
-Aliases: `holded me`, `holded whoami`
-
 ```bash
 holded employee
-holded me
-holded whoami
+```
+
+---
+
+### `holded organization`
+Lists organization employees from the Holded Teamzone organization endpoint.
+
+```bash
+holded organization
 ```
 
 ---

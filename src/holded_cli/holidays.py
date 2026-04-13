@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from holded_cli.holded_client import HoldedClient
 
 
-_PARIS_TZ = ZoneInfo("Europe/Paris")
+try:
+    _PARIS_TZ = ZoneInfo("Europe/Paris")
+except ZoneInfoNotFoundError:
+    _PARIS_TZ = timezone.utc
 
 
 def _current_year_paris() -> int:

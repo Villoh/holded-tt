@@ -49,7 +49,9 @@ def test_root_help_is_available(runner) -> None:
     assert "session" in result.stdout
     assert "workplaces" in result.stdout
     assert "employee" in result.stdout
+    assert "organization" in result.stdout
     assert "personal-info" not in result.stdout
+    assert " whoami " not in result.stdout
     assert "track" in result.stdout
     assert "config" in result.stdout
     assert "export" in result.stdout

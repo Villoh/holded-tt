@@ -132,6 +132,52 @@ def test_get_personal_info_requests_expected_endpoint() -> None:
     assert result == {"phone": "+34 555 0101"}
 
 
+def test_get_organization_employees_requests_expected_endpoint() -> None:
+    from holded_cli.holded_client import HoldedClient
+
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        return httpx.Response(
+            200,
+            json=[{"id": "emp-1", "fullName": "Alice Example"}],
+            request=request,
+        )
+
+    with HoldedClient(
+        _session_store(), transport=httpx.MockTransport(handler)
+    ) as client:
+        result = client.get_organization_employees()
+
+    assert seen_paths == ["/internal/teamzone/v2/employees/organization"]
+    assert result == [{"id": "emp-1", "fullName": "Alice Example"}]
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ([{"id": "emp-1"}], [{"id": "emp-1"}]),
+        ({"employees": [{"id": "emp-2"}]}, [{"id": "emp-2"}]),
+        ({"data": [{"id": "emp-3"}]}, [{"id": "emp-3"}]),
+        ({"items": [{"id": "emp-4"}]}, [{"id": "emp-4"}]),
+        ({"unexpected": True}, []),
+    ],
+)
+def test_get_organization_employees_supports_multiple_response_shapes(
+    payload, expected
+) -> None:
+    from holded_cli.holded_client import HoldedClient
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload, request=request)
+
+    with HoldedClient(
+        _session_store(), transport=httpx.MockTransport(handler)
+    ) as client:
+        assert client.get_organization_employees() == expected
+
+
 def test_get_timetracking_pdf_returns_response_bytes(monkeypatch) -> None:
     import holded_cli.holded_client as holded_client
     from holded_cli.holded_client import HoldedClient
