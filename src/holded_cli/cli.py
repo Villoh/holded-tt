@@ -20,7 +20,7 @@ from holded_cli.commands import (
     export_command,
     login_command,
     session_command,
-    track_command,
+    track_app,
     workplaces_command,
 )
 from holded_cli.commands.clock import CLOCK_HELP
@@ -98,14 +98,6 @@ app.command(
     help="List organization employees from Holded Teamzone.",
 )(_with_cli_error_handling(employees_command))
 app.command(
-    "track",
-    help=(
-        "Register working days in Holded for a date range.\n\n"
-        "Example:\n"
-        "  holded track --from 2026-04-01 --to 2026-04-30"
-    ),
-)(_with_cli_error_handling(track_command))
-app.command(
     "export",
     help=(
         "Export time-tracking records as PDF or Excel.\n\n"
@@ -126,3 +118,4 @@ def _config_callback(ctx: typer.Context) -> None:
 
 app.add_typer(clock_app, name="clock")
 app.add_typer(config_app, name="config")
+app.add_typer(track_app, name="track")

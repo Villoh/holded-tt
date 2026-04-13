@@ -150,10 +150,50 @@ holded track --from 2026-01-01 --to 2026-12-31 --yes
 Notes:
 
 - Use either `--today` or both `--from YYYY-MM-DD` and `--to YYYY-MM-DD`.
+- `holded track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
 - `--dry-run` still uses `holidays.json` if that cache already exists.
 - `--dry-run` does not fetch missing holidays from Holded. If the holiday cache is missing, the preview falls back to no holiday filtering for those uncached years.
+
+Subcommands:
+
+```bash
+# Inspect tracked entries and tracker IDs for a single day
+holded track show --date 2026-04-10
+
+# Inspect a date range
+holded track show --from 2026-04-07 --to 2026-04-10
+
+# Update a date range, one existing tracker per day
+holded track update --from 2026-04-07 --to 2026-04-10 --end 17:00
+
+# Include weekends or holidays when updating a range
+holded track update --from 2026-04-07 --to 2026-04-10 \
+                    --include-weekends --include-holidays \
+                    --end 17:00
+
+# Update a single existing tracker by its tracker ID
+holded track update --date 2026-04-10 --tracker-id <tracker_id> --end 17:00
+
+# Replace the pause windows explicitly
+holded track update --date 2026-04-10 --tracker-id <tracker_id> \
+                    --start 08:30 --end 17:00 \
+                    --pause 14:00-14:30
+```
+
+Notes for `track show` and `track update`:
+
+- `track show --date` uses Holded's single-day timetracking endpoint. `track show --from/--to` uses the range endpoint.
+- `track show` is intended to help you discover the `tracker.id` values returned by Holded and inspect the current `Time`, `Pauses`, `Status`, `Approved`, `Method`, and `Remote` fields.
+- `track update` updates either a single tracker (`--date` + `--tracker-id`) or a date range (`--from/--to` or `--today`).
+- Single-tracker updates require both `--tracker-id` and either `--date` or `--today`.
+- Range updates filter weekends and workplace holidays by default, just like `holded track`. Use `--include-weekends` and `--include-holidays` to opt in. These flags only affect range updates.
+- Range updates are strict: each target day must have exactly one existing tracker. Days with zero trackers, multiple trackers, or running trackers raise an error.
+- Range updates are processed one tracker at a time, not atomically. If a later day fails, earlier days in the same command may already have been updated.
+- If `--start` or `--end` is omitted during `track update`, the CLI keeps the existing value from Holded.
+- If `--pause` is omitted during `track update`, the CLI keeps the existing pauses. If you pass `--pause`, it replaces the current pauses with the provided list.
+- Existing pauses are displayed in `track show` and update previews as `HH:MM -> HH:MM`.
 
 ---
 
@@ -260,7 +300,7 @@ uv run holded --help
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=holded_cli
+uv run pytest --cov=src --cov-report=term-missing
 ```
 
 If you prefer plain `pip` for local development:

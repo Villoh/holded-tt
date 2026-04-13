@@ -96,6 +96,8 @@ def test_track_help_includes_usage_example(runner) -> None:
 
     assert result.exit_code == 0
     assert "holded track --from 2026-04-01 --to 2026-04-30" in result.stdout
+    assert "show" in result.stdout
+    assert "update" in result.stdout
 
 
 def test_config_help_lists_show_and_set(runner) -> None:

@@ -78,16 +78,31 @@ class HoldedClient:
         return response.content
 
     def get_timetracking_data(
-        self, from_date: date, to_date: date, timezone: str
+        self,
+        from_date: date,
+        to_date: date,
+        timezone: str,
+        *,
+        exclude_rejected: bool = False,
     ) -> list[dict[str, Any]]:
         """Fetch the time-tracking JSON data for a date range."""
         params = {
             "startDate": _make_datetime_param(from_date, time(0, 0, 0), timezone),
             "endDate": _make_datetime_param(to_date, time(23, 59, 59), timezone),
+            "excludeRejected": str(exclude_rejected).lower(),
         }
         response = self._get("/internal/team/v2/daily-timetracking", params=params)
         data = self._parse_json(response)
         return data if isinstance(data, list) else []
+
+    def get_day_timetracking(self, target_date: date, timezone: str) -> dict[str, Any]:
+        """Fetch the time-tracking JSON data for a single day."""
+        params = {
+            "date": _make_datetime_param(target_date, time(0, 0, 0), timezone),
+        }
+        response = self._get("/internal/team/v2/day-timetracking", params=params)
+        data = self._parse_json(response)
+        return data if isinstance(data, dict) else {}
 
     def get_workplaces(self) -> list[dict[str, Any]]:
         """Fetch the list of available workplaces."""
@@ -229,6 +244,20 @@ class HoldedClient:
                 hint="Some days may have already been tracked. Check Holded and try again.",
             ) from exc
 
+    def update_bulk_timetracking(self, payload: dict[str, Any]) -> None:
+        """Update existing timetracking entries in bulk. Returns None on 204."""
+        response = self._put("/internal/team/v2/bulk-timetracking-update", json=payload)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            from holded_cli.holded_client import HoldedApiError
+
+            body = exc.response.text[:300].strip()
+            raise HoldedApiError(
+                message=f"Update failed (HTTP {exc.response.status_code}): {body}",
+                hint="Check the selected days and try again.",
+            ) from exc
+
     # --- Internal helpers ---
 
     def _get(self, path: str, **kwargs: Any) -> httpx.Response:
@@ -236,6 +265,9 @@ class HoldedClient:
 
     def _post(self, path: str, **kwargs: Any) -> httpx.Response:
         return self._request("POST", path, **kwargs)
+
+    def _put(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self._request("PUT", path, **kwargs)
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:

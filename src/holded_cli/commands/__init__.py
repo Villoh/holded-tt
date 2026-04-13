@@ -7,7 +7,8 @@ from holded_cli.commands.employees import employees_command
 from holded_cli.commands.export import export_command
 from holded_cli.commands.login import login_command
 from holded_cli.commands.session import session_command
-from holded_cli.commands.track import track_command
+from holded_cli.commands.track import app as track_app
+from holded_cli.commands.track import track_command, track_update_command
 from holded_cli.commands.workplaces import workplaces_command
 
 __all__ = [
@@ -18,6 +19,8 @@ __all__ = [
     "export_command",
     "login_command",
     "session_command",
+    "track_app",
     "track_command",
+    "track_update_command",
     "workplaces_command",
 ]

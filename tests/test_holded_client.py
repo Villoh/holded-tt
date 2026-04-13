@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, time, timedelta, timezone
 
 import httpx
@@ -238,6 +239,32 @@ def test_get_timetracking_data_returns_empty_list_for_non_list_payload(
         )
 
 
+def test_get_day_timetracking_returns_dict_or_empty_dict(monkeypatch) -> None:
+    import holded_cli.holded_client as holded_client
+    from holded_cli.holded_client import HoldedClient
+
+    monkeypatch.setattr(holded_client, "_make_datetime_param", lambda *_: "stubbed")
+
+    responses = iter(
+        [
+            {"status_code": 200, "json": {"date": "2026-04-10", "trackers": []}},
+            {"status_code": 200, "json": []},
+        ]
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(request=request, **next(responses))
+
+    with HoldedClient(
+        _session_store(), transport=httpx.MockTransport(handler)
+    ) as client:
+        assert client.get_day_timetracking(date(2026, 4, 10), "UTC") == {
+            "date": "2026-04-10",
+            "trackers": [],
+        }
+        assert client.get_day_timetracking(date(2026, 4, 10), "UTC") == {}
+
+
 def test_get_current_tracker_handles_missing_and_active_trackers() -> None:
     from holded_cli.holded_client import HoldedClient
 
@@ -383,7 +410,12 @@ def test_bulk_timetracking_errors_include_response_body() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("check-bulk-timetracking-request"):
             return httpx.Response(400, text="bad validation payload", request=request)
-        return httpx.Response(409, text="already tracked", request=request)
+        if request.url.path.endswith("bulk-timetracking-request"):
+            assert request.method == "POST"
+            return httpx.Response(409, text="already tracked", request=request)
+        assert request.method == "PUT"
+        assert request.url.path.endswith("bulk-timetracking-update")
+        return httpx.Response(422, text="invalid tracker ids", request=request)
 
     with HoldedClient(
         _session_store(), transport=httpx.MockTransport(handler)
@@ -392,11 +424,91 @@ def test_bulk_timetracking_errors_include_response_body() -> None:
             client.check_bulk_timetracking({"days": []})
         with pytest.raises(HoldedApiError) as submit_exc:
             client.submit_bulk_timetracking({"days": []})
+        with pytest.raises(HoldedApiError) as update_exc:
+            client.update_bulk_timetracking({"trackers": []})
 
     assert "validation failed" in check_exc.value.message.lower()
     assert "bad validation payload" in check_exc.value.message
     assert "submission failed" in submit_exc.value.message.lower()
     assert "already tracked" in submit_exc.value.message
+    assert "update failed" in update_exc.value.message.lower()
+    assert "invalid tracker ids" in update_exc.value.message
+
+
+def test_submit_bulk_timetracking_uses_create_endpoint() -> None:
+    from holded_cli.holded_client import HoldedClient
+
+    seen_requests: list[tuple[str, str, dict[str, object]]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_requests.append(
+            (
+                request.method,
+                request.url.path,
+                json.loads(request.content.decode("utf-8")),
+            )
+        )
+        return httpx.Response(204, request=request)
+
+    payload = {
+        "trackers": [
+            {
+                "id": "emp-1",
+                "workplaceId": "wp-1",
+                "isRemote": False,
+                "start": "2026-04-07T08:30:00+02:00",
+                "end": "2026-04-07T17:00:00+02:00",
+                "pauses": [{"start": "14:00", "end": "14:30"}],
+            }
+        ]
+    }
+
+    with HoldedClient(
+        _session_store(), transport=httpx.MockTransport(handler)
+    ) as client:
+        client.submit_bulk_timetracking(payload)
+
+    assert seen_requests == [
+        ("POST", "/internal/team/v2/bulk-timetracking-request", payload)
+    ]
+
+
+def test_update_bulk_timetracking_uses_update_endpoint() -> None:
+    from holded_cli.holded_client import HoldedClient
+
+    seen_requests: list[tuple[str, str, dict[str, object]]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_requests.append(
+            (
+                request.method,
+                request.url.path,
+                json.loads(request.content.decode("utf-8")),
+            )
+        )
+        return httpx.Response(204, request=request)
+
+    payload = {
+        "trackers": [
+            {
+                "id": "trk-1",
+                "workplaceId": "wp-1",
+                "isRemote": False,
+                "start": "2026-04-07T08:30:00+02:00",
+                "end": "2026-04-07T17:00:00+02:00",
+                "pauses": [{"start": "14:00", "end": "14:30"}],
+            }
+        ]
+    }
+
+    with HoldedClient(
+        _session_store(), transport=httpx.MockTransport(handler)
+    ) as client:
+        client.update_bulk_timetracking(payload)
+
+    assert seen_requests == [
+        ("PUT", "/internal/team/v2/bulk-timetracking-update", payload)
+    ]
 
 
 def test_request_wraps_transport_errors() -> None:
