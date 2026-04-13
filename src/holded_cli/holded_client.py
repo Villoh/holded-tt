@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -12,6 +14,12 @@ from holded_cli.session import SessionStore
 
 
 HOLDED_BASE_URL = "https://app.holded.com"
+
+
+def _make_datetime_param(d: date, t: time, tz_name: str) -> str:
+    """Format a date+time as an ISO-8601 string with the correct UTC offset for the given timezone."""
+    tz = ZoneInfo(tz_name)
+    return datetime.combine(d, t, tzinfo=tz).isoformat()
 
 
 class HoldedApiError(HoldedCliError):
@@ -50,6 +58,36 @@ class HoldedClient:
         self._client.close()
 
     # --- Public API methods ---
+
+    def get_timetracking_pdf(
+        self, from_date: date, to_date: date, timezone: str
+    ) -> bytes:
+        """Download the time-tracking PDF for a date range."""
+        params = {
+            "startDate": _make_datetime_param(from_date, time(0, 0, 0), timezone),
+            "endDate": _make_datetime_param(to_date, time(23, 59, 59), timezone),
+        }
+        response = self._get("/internal/team/v2/daily-timetracking/pdf", params=params)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise HoldedApiError(
+                message=f"PDF export failed (HTTP {exc.response.status_code}).",
+                hint="Check your session with `holded session` and try again.",
+            ) from exc
+        return response.content
+
+    def get_timetracking_data(
+        self, from_date: date, to_date: date, timezone: str
+    ) -> list[dict[str, Any]]:
+        """Fetch the time-tracking JSON data for a date range."""
+        params = {
+            "startDate": _make_datetime_param(from_date, time(0, 0, 0), timezone),
+            "endDate": _make_datetime_param(to_date, time(23, 59, 59), timezone),
+        }
+        response = self._get("/internal/team/v2/daily-timetracking", params=params)
+        data = self._parse_json(response)
+        return data if isinstance(data, list) else []
 
     def get_workplaces(self) -> list[dict[str, Any]]:
         """Fetch the list of available workplaces."""

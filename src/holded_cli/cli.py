@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from functools import wraps
 
 import typer
 
+# Ensure Unicode characters (e.g. ✓) render correctly on Windows terminals
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from holded_cli import __version__
 from holded_cli.commands import (
+    export_command,
     login_command,
     session_command,
     track_command,
@@ -85,6 +93,15 @@ app.command(
         "  holded track --from 2026-04-01 --to 2026-04-30"
     ),
 )(_with_cli_error_handling(track_command))
+app.command(
+    "export",
+    help=(
+        "Export time-tracking records as PDF or Excel.\n\n"
+        "Example:\n"
+        "  holded export --from 2026-04-01 --to 2026-04-30\n"
+        "  holded export --from 2026-04-01 --to 2026-04-30 --format xlsx"
+    ),
+)(_with_cli_error_handling(export_command))
 config_app.command("show")(_with_cli_error_handling(show_command))
 config_app.command("set")(_with_cli_error_handling(set_command))
 

@@ -12,13 +12,13 @@ from holded_cli.errors import HoldedCliError
 def get_output_console(file: TextIO | None = None) -> Console:
     """Return the standard output console with sane non-TTY defaults."""
 
-    return Console(file=file, soft_wrap=True)
+    return Console(file=file, soft_wrap=True, legacy_windows=False)
 
 
 def get_error_console(file: TextIO | None = None) -> Console:
     """Return the standard error console with sane non-TTY defaults."""
 
-    return Console(file=file, stderr=file is None, soft_wrap=True)
+    return Console(file=file, stderr=file is None, soft_wrap=True, legacy_windows=False)
 
 
 def render_error(error: HoldedCliError, console: Console | None = None) -> None:
