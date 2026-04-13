@@ -1,6 +1,10 @@
 # Holded CLI
 
-`holded` is a Python CLI for automating time tracking on [Holded](https://app.holded.com).
+`holded` is an unofficial Python CLI for automating time tracking on [Holded](https://app.holded.com).
+
+> [!IMPORTANT]
+> This project is not affiliated with, endorsed by, or supported by Holded.
+> Holded names and marks belong to their respective owner.
 
 ## Install
 
