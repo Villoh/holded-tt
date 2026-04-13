@@ -102,6 +102,67 @@ class HoldedClient:
                     return value
         return []
 
+    def get_current_tracker(self) -> dict[str, Any] | None:
+        """Return the active tracker, or None if there is none."""
+        response = self._get("/internal/team/v2/current-tracker")
+        if response.status_code == 404:
+            return None
+        data = self._parse_json(response)
+        if not isinstance(data, dict):
+            return None
+        # No active tracker: status is absent or explicitly null/empty
+        if not data.get("id"):
+            return None
+        return data
+
+    def clock_in(self) -> str:
+        """Start a new tracker. Returns the tracker ID."""
+        response = self._post(
+            "/internal/team/employee/tracker/clock-in",
+            json={"location": None, "triggeredFrom": "timetracking"},
+        )
+        data = self._parse_json(response)
+        if not isinstance(data, str):
+            raise HoldedApiError(
+                message="Unexpected clock-in response.",
+                hint="The API may have changed. Check your session and try again.",
+            )
+        return data
+
+    def clock_out(self, tracker_id: str) -> None:
+        """Stop the active tracker."""
+        response = self._post(
+            f"/internal/team/employee/tracker/clock-out/{tracker_id}",
+            json={"location": None, "offset": 0, "triggeredFrom": "timetracking"},
+        )
+        if response.status_code in (200, 422):
+            # 422 with errorCode 4 means "duration too short" but Holded still
+            # closes the tracker — treat it as success.
+            return
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise HoldedApiError(
+                message=f"Clock-out failed (HTTP {exc.response.status_code}).",
+                hint="Check your session with `holded session` and try again.",
+            ) from exc
+
+    def pause_tracker(self, tracker_id: str) -> dict[str, Any]:
+        """Pause the active tracker. Returns the pause record."""
+        response = self._post(
+            "/internal/team/tracker/pause",
+            json={"trackerId": tracker_id, "location": None},
+        )
+        return self._parse_json(response)
+
+    def resume_tracker(self, tracker_id: str) -> dict[str, Any]:
+        """Resume a paused tracker. Returns the resume record."""
+        response = self._post(
+            "/internal/team/tracker/resume",
+            json={"trackerId": tracker_id, "location": None},
+        )
+        return self._parse_json(response)
+
     def get_year_summary(self, year: int, workplace_id: str = "") -> dict[str, Any]:
         """Fetch the time-off year summary for holiday extraction."""
         response = self._get(

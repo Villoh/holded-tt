@@ -14,12 +14,14 @@ if hasattr(sys.stderr, "reconfigure"):
 
 from holded_cli import __version__
 from holded_cli.commands import (
+    clock_app,
     export_command,
     login_command,
     session_command,
     track_command,
     workplaces_command,
 )
+from holded_cli.commands.clock import CLOCK_HELP
 from holded_cli.commands.config import CONFIG_HELP, set_command, show_command
 from holded_cli.console import render_error
 from holded_cli.errors import HoldedCliError
@@ -112,4 +114,5 @@ def _config_callback(ctx: typer.Context) -> None:
         _with_cli_error_handling(show_command)(ctx)
 
 
+app.add_typer(clock_app, name="clock")
 app.add_typer(config_app, name="config")
