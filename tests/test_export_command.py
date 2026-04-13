@@ -45,6 +45,40 @@ def test_fmt_duration_ignores_seconds() -> None:
     assert export_module._fmt_duration(3661) == "01h 01m"
 
 
+def test_default_export_path_uses_base_filename_when_unused(
+    tmp_path: Path, monkeypatch
+) -> None:
+    export_module = importlib.import_module("holded_cli.commands.export")
+
+    monkeypatch.chdir(tmp_path)
+
+    path = export_module._default_export_path(
+        datetime(2026, 4, 1).date(),
+        datetime(2026, 4, 30).date(),
+        "pdf",
+    )
+
+    assert path.name == "holded-2026-04-01_2026-04-30.pdf"
+
+
+def test_default_export_path_uses_incremental_suffix_when_file_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
+    export_module = importlib.import_module("holded_cli.commands.export")
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "holded-2026-04-01_2026-04-30.pdf").write_bytes(b"first")
+    (tmp_path / "holded-2026-04-01_2026-04-30-2.pdf").write_bytes(b"second")
+
+    path = export_module._default_export_path(
+        datetime(2026, 4, 1).date(),
+        datetime(2026, 4, 30).date(),
+        "pdf",
+    )
+
+    assert path.name == "holded-2026-04-01_2026-04-30-3.pdf"
+
+
 # ---------------------------------------------------------------------------
 # Pure-function tests: _utc_to_local_hhmm
 # ---------------------------------------------------------------------------
@@ -376,3 +410,72 @@ def test_export_xlsx_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
     assert result.exit_code == 0
     assert out_file.exists()
     assert out_file.stat().st_size > 0
+
+
+def test_export_pdf_without_out_uses_unsuffixed_default_filename(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_cli.cli")
+    fake_pdf = b"%PDF-1.4 fake"
+
+    _patch_export_client(
+        monkeypatch,
+        cli_module,
+        _fake_state(),
+        get_timetracking_pdf=lambda self, *_: fake_pdf,
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(
+        cli_module.app,
+        [
+            "export",
+            "--from",
+            "2026-04-01",
+            "--to",
+            "2026-04-30",
+            "--format",
+            "pdf",
+        ],
+    )
+
+    out_file = tmp_path / "holded-2026-04-01_2026-04-30.pdf"
+
+    assert result.exit_code == 0
+    assert out_file.exists()
+    assert out_file.read_bytes() == fake_pdf
+
+
+def test_export_pdf_without_out_uses_incremental_suffix_when_needed(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_cli.cli")
+    fake_pdf = b"%PDF-1.4 fake"
+
+    _patch_export_client(
+        monkeypatch,
+        cli_module,
+        _fake_state(),
+        get_timetracking_pdf=lambda self, *_: fake_pdf,
+    )
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "holded-2026-04-01_2026-04-30.pdf").write_bytes(b"existing")
+
+    result = runner.invoke(
+        cli_module.app,
+        [
+            "export",
+            "--from",
+            "2026-04-01",
+            "--to",
+            "2026-04-30",
+            "--format",
+            "pdf",
+        ],
+    )
+
+    out_file = tmp_path / "holded-2026-04-01_2026-04-30-2.pdf"
+
+    assert result.exit_code == 0
+    assert out_file.exists()
+    assert out_file.read_bytes() == fake_pdf

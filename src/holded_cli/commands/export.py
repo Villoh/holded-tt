@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -16,9 +16,18 @@ from holded_cli.state import AppState
 
 
 _ES_MONTHS = {
-    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
-    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
-    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
 }
 
 _APPROVED_STATUS = {
@@ -39,6 +48,21 @@ def _fmt_duration(seconds: int) -> str:
         return ""
     h, m = divmod(abs(seconds) // 60, 60)
     return f"{h:02d}h {m:02d}m"
+
+
+def _default_export_path(from_date: date, to_date: date, fmt: str) -> Path:
+    base_name = f"holded-{from_date}_{to_date}"
+    candidate = Path.cwd() / f"{base_name}.{fmt}"
+
+    if not candidate.exists():
+        return candidate
+
+    suffix = 2
+    while True:
+        candidate = Path.cwd() / f"{base_name}-{suffix}.{fmt}"
+        if not candidate.exists():
+            return candidate
+        suffix += 1
 
 
 def _build_xlsx(
@@ -76,7 +100,9 @@ def _build_xlsx(
     ws.append([])  # row 3 empty
 
     # Title: "Registros de control horario - Mes YYYY"
-    month_str = _ES_MONTHS.get(from_date.month, "") if from_date.month == to_date.month else ""
+    month_str = (
+        _ES_MONTHS.get(from_date.month, "") if from_date.month == to_date.month else ""
+    )
     if month_str:
         title = f"Registros de control horario - {month_str} {from_date.year}"
     else:
@@ -87,8 +113,14 @@ def _build_xlsx(
 
     # --- Column headers ---
     headers = [
-        "Día", "Horario", "Horas totales", "Total horas trabajadas",
-        "Total horas pausadas", "Horas planeadas", "Ubicación", "Estado",
+        "Día",
+        "Horario",
+        "Horas totales",
+        "Total horas trabajadas",
+        "Total horas pausadas",
+        "Horas planeadas",
+        "Ubicación",
+        "Estado",
     ]
     ws.append(headers)
     header_row = ws.max_row
@@ -139,7 +171,9 @@ def _build_xlsx(
             workplace_id = tracker.get("workplaceId") or ""
             location = workplace_map.get(workplace_id, "")
             status = _APPROVED_STATUS.get(tracker.get("approvedStatus"), "Pendiente")
-            ws.append([day_str, horario, total, worked, paused, expected, location, status])
+            ws.append(
+                [day_str, horario, total, worked, paused, expected, location, status]
+            )
             row_idx = ws.max_row
             for col in range(1, NUM_COLS + 1):
                 ws.cell(row=row_idx, column=col).font = normal_font
@@ -174,7 +208,9 @@ def _build_xlsx(
 
 def export_command(
     ctx: typer.Context,
-    from_date: str = typer.Option(..., "--from", help="Start date in YYYY-MM-DD format."),
+    from_date: str = typer.Option(
+        ..., "--from", help="Start date in YYYY-MM-DD format."
+    ),
     to_date: str = typer.Option(..., "--to", help="End date in YYYY-MM-DD format."),
     fmt: str = typer.Option("pdf", "--format", help="Output format: pdf or xlsx."),
     out: Optional[Path] = typer.Option(
@@ -209,8 +245,7 @@ def export_command(
         )
 
     if out is None:
-        filename = f"holded-{resolved_from}_{resolved_to}.{fmt}"
-        out = Path.cwd() / filename
+        out = _default_export_path(resolved_from, resolved_to, fmt)
 
     console = get_output_console()
 
