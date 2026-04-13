@@ -15,23 +15,17 @@ from holded_cli.holded_client import HoldedClient
 from holded_cli.state import AppState
 
 
-EXPORT_HELP = """Export time-tracking records for a date range.
+_ES_MONTHS = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+}
 
-Examples:
-  holded export --from 2026-04-01 --to 2026-04-30
-  holded export --from 2026-04-01 --to 2026-04-30 --format xlsx
-  holded export --from 2026-04-01 --to 2026-04-30 --out ~/Desktop/april.pdf
-"""
-
-_MIDNIGHT = "00:00:00"
-_END_OF_DAY = "23:59:59"
-
-
-def _seconds_to_hhmm(seconds: int) -> str:
-    sign = "-" if seconds < 0 else ""
-    seconds = abs(seconds)
-    h, m = divmod(seconds // 60, 60)
-    return f"{sign}{h:02d}:{m:02d}"
+_APPROVED_STATUS = {
+    None: "Pendiente",
+    "approved": "Aprobado",
+    "rejected": "Rechazado",
+}
 
 
 def _utc_to_local_hhmm(utc_iso: str, tz_name: str) -> str:
@@ -39,80 +33,137 @@ def _utc_to_local_hhmm(utc_iso: str, tz_name: str) -> str:
     return dt.astimezone(ZoneInfo(tz_name)).strftime("%H:%M")
 
 
-def _format_pauses(pauses: list[dict], tz_name: str) -> str:
-    parts = []
-    for p in pauses:
-        start = _utc_to_local_hhmm(p["start"], tz_name)
-        end = _utc_to_local_hhmm(p["end"], tz_name)
-        parts.append(f"{start}-{end}")
-    return ", ".join(parts) if parts else "—"
+def _fmt_duration(seconds: int) -> str:
+    """Format seconds as 'NNh MMm', or empty string if zero."""
+    if not seconds:
+        return ""
+    h, m = divmod(abs(seconds) // 60, 60)
+    return f"{h:02d}h {m:02d}m"
 
 
-def _build_xlsx(data: list[dict], tz_name: str, from_str: str, to_str: str) -> bytes:
+def _build_xlsx(
+    data: list[dict],
+    tz_name: str,
+    from_date: datetime,
+    to_date: datetime,
+    workplace_map: dict[str, str],
+    employee_name: str,
+    company_name: str,
+) -> bytes:
     import io
     import openpyxl
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+
+    NUM_COLS = 8
+    thin = Side(style="thin", color="CCCCCC")
+    border = Border(bottom=thin)
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Time Tracking"
+    ws.title = "Registro horario"
 
-    # --- Title ---
-    ws.merge_cells("A1:H1")
-    title_cell = ws["A1"]
-    title_cell.value = f"Time Tracking  ·  {from_str} → {to_str}"
-    title_cell.font = Font(bold=True, size=13)
-    title_cell.alignment = Alignment(horizontal="left")
-    ws.row_dimensions[1].height = 22
+    def _merge_bold(row: int, value: str, size: int = 11) -> None:
+        ws.merge_cells(f"A{row}:H{row}")
+        cell = ws.cell(row=row, column=1, value=value)
+        cell.font = Font(bold=True, size=size)
 
-    ws.append([])  # blank row
+    # --- Header block ---
+    if company_name:
+        _merge_bold(1, company_name, size=12)
+    _merge_bold(2, employee_name)
 
-    # --- Headers ---
-    headers = ["Date", "Day", "Start", "End", "Pauses", "Worked", "Expected", "Overtime"]
+    ws.append([])  # row 3 empty
+
+    # Title: "Registros de control horario - Mes YYYY"
+    month_str = _ES_MONTHS.get(from_date.month, "") if from_date.month == to_date.month else ""
+    if month_str:
+        title = f"Registros de control horario - {month_str} {from_date.year}"
+    else:
+        title = f"Registros de control horario - {from_date.strftime('%d/%m/%Y')} - {to_date.strftime('%d/%m/%Y')}"
+    _merge_bold(4, title, size=12)
+
+    ws.append([])  # row 5 empty
+
+    # --- Column headers ---
+    headers = [
+        "Día", "Horario", "Horas totales", "Total horas trabajadas",
+        "Total horas pausadas", "Horas planeadas", "Ubicación", "Estado",
+    ]
     ws.append(headers)
     header_row = ws.max_row
     header_fill = PatternFill("solid", fgColor="1F3864")
-    for col, _ in enumerate(headers, 1):
+    center = Alignment(horizontal="center", vertical="center")
+    for col in range(1, NUM_COLS + 1):
         cell = ws.cell(row=header_row, column=col)
-        cell.font = Font(bold=True, color="FFFFFF")
+        cell.font = Font(bold=True, color="FFFFFF", size=10)
         cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
+        cell.alignment = center
+    ws.row_dimensions[header_row].height = 18
 
     # --- Data rows ---
-    weekend_fill = PatternFill("solid", fgColor="F2F2F2")
+    dim_font = Font(color="AAAAAA", size=10)
+    normal_font = Font(size=10)
 
     for entry in data:
         d = entry["date"]
         dt = datetime.fromisoformat(d)
-        day_name = dt.strftime("%A")
         is_weekend = dt.weekday() >= 5
-
         trackers = entry.get("trackers", [])
+        timeoffs = entry.get("timeoffs", [])
         stats = entry.get("stats", {})
 
-        if trackers:
+        day_str = dt.strftime("%d/%m/%Y")
+
+        if is_weekend:
+            ws.append([day_str, "", "", "", "", "", "", ""])
+            row_idx = ws.max_row
+            for col in range(1, NUM_COLS + 1):
+                ws.cell(row=row_idx, column=col).font = dim_font
+        elif timeoffs:
+            holiday_name = timeoffs[0].get("name", "Festivo")
+            ws.append([day_str, holiday_name, "", "", "", "", "", ""])
+            row_idx = ws.max_row
+            for col in range(1, NUM_COLS + 1):
+                c = ws.cell(row=row_idx, column=col)
+                c.font = Font(italic=True, color="666666", size=10)
+        elif trackers:
             tracker = trackers[0]
             start = _utc_to_local_hhmm(tracker["start"], tz_name)
             end = _utc_to_local_hhmm(tracker["end"], tz_name)
-            pauses = _format_pauses(tracker.get("pauses", []), tz_name)
-            worked = _seconds_to_hhmm(stats.get("timeWorked", 0))
-            expected = _seconds_to_hhmm(stats.get("expectedTime", 0))
-            overtime_secs = stats.get("overtime", 0)
-            overtime = ("+" if overtime_secs > 0 else "") + _seconds_to_hhmm(overtime_secs)
-        else:
-            start = end = pauses = worked = expected = overtime = "—"
-
-        row = [d, day_name, start, end, pauses, worked, expected, overtime]
-        ws.append(row)
-
-        if is_weekend or not trackers:
+            horario = f"{start} - {end}"
+            total = _fmt_duration(tracker.get("time", 0) or tracker.get("duration", 0))
+            worked = _fmt_duration(tracker.get("effectiveWorkedTime", 0))
+            paused = _fmt_duration(tracker.get("pausedTime", 0))
+            expected = _fmt_duration(stats.get("expectedTime", 0))
+            workplace_id = tracker.get("workplaceId") or ""
+            location = workplace_map.get(workplace_id, "")
+            status = _APPROVED_STATUS.get(tracker.get("approvedStatus"), "Pendiente")
+            ws.append([day_str, horario, total, worked, paused, expected, location, status])
             row_idx = ws.max_row
-            for col in range(1, len(headers) + 1):
-                ws.cell(row=row_idx, column=col).fill = weekend_fill
+            for col in range(1, NUM_COLS + 1):
+                ws.cell(row=row_idx, column=col).font = normal_font
+        else:
+            expected = _fmt_duration(stats.get("expectedTime", 0))
+            ws.append([day_str, "", "", "", "", expected, "", ""])
+            row_idx = ws.max_row
+            for col in range(1, NUM_COLS + 1):
+                ws.cell(row=row_idx, column=col).font = dim_font
+
+        # subtle bottom border on every data row
+        row_idx = ws.max_row
+        for col in range(1, NUM_COLS + 1):
+            ws.cell(row=row_idx, column=col).border = border
+
+    # --- Footer ---
+    ws.append([])
+    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    ws.append([f"Informe creado automáticamente con Holded - {now_str}"])
+    footer_row = ws.max_row
+    ws.cell(row=footer_row, column=1).font = Font(italic=True, color="999999", size=9)
 
     # --- Column widths ---
-    col_widths = [13, 12, 7, 7, 18, 9, 10, 10]
+    col_widths = [13, 18, 15, 22, 22, 15, 16, 12]
     for i, width in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
@@ -129,12 +180,16 @@ def export_command(
     out: Optional[Path] = typer.Option(
         None, "--out", help="Output file path. Defaults to current directory."
     ),
+    company: Optional[str] = typer.Option(
+        None, "--company", help="Company name for the Excel header."
+    ),
 ) -> None:
     """Export time-tracking records as PDF or Excel for a date range.
 
     Example:
       holded export --from 2026-04-01 --to 2026-04-30
       holded export --from 2026-04-01 --to 2026-04-30 --format xlsx
+      holded export --from 2026-04-01 --to 2026-04-30 --format xlsx --company 'ACME S.L.'
     """
     state: AppState = ctx.obj
 
@@ -170,8 +225,26 @@ def export_command(
             data = client.get_timetracking_data(
                 resolved_from, resolved_to, state.config.timezone
             )
+            workplaces = client.get_workplaces()
+            workplace_map = {wp["id"]: wp["name"] for wp in workplaces}
+
+            employee_name = ""
+            for entry in data:
+                for tracker in entry.get("trackers", []):
+                    employee_name = tracker.get("employeeName", "")
+                    if employee_name:
+                        break
+                if employee_name:
+                    break
+
             content = _build_xlsx(
-                data, state.config.timezone, str(resolved_from), str(resolved_to)
+                data=data,
+                tz_name=state.config.timezone,
+                from_date=datetime.fromisoformat(str(resolved_from)),
+                to_date=datetime.fromisoformat(str(resolved_to)),
+                workplace_map=workplace_map,
+                employee_name=employee_name,
+                company_name=company or "",
             )
 
     out.parent.mkdir(parents=True, exist_ok=True)
