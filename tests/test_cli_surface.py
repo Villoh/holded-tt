@@ -6,12 +6,12 @@ from pathlib import Path
 
 
 def _patch_runtime_files(base_dir: Path, monkeypatch) -> None:
-    paths_module = importlib.import_module("holded_cli.paths")
-    config_module = importlib.import_module("holded_cli.config")
-    session_module = importlib.import_module("holded_cli.session")
-    state_module = importlib.import_module("holded_cli.state")
+    paths_module = importlib.import_module("holded_tt_cli.paths")
+    config_module = importlib.import_module("holded_tt_cli.config")
+    session_module = importlib.import_module("holded_tt_cli.session")
+    state_module = importlib.import_module("holded_tt_cli.state")
 
-    config_dir = base_dir / "holded-cli"
+    config_dir = base_dir / "holded-tt-cli"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
     holidays_file = config_dir / "holidays.json"
@@ -29,8 +29,8 @@ def _patch_runtime_files(base_dir: Path, monkeypatch) -> None:
 
 
 def test_version_reports_package_version(runner) -> None:
-    package = importlib.import_module("holded_cli")
-    cli_module = importlib.import_module("holded_cli.cli")
+    package = importlib.import_module("holded_tt_cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["--version"])
 
@@ -39,7 +39,7 @@ def test_version_reports_package_version(runner) -> None:
 
 
 def test_root_help_is_available(runner) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["--help"])
 
@@ -62,8 +62,8 @@ def test_root_callback_bootstraps_shared_state(
     temp_config_dir, runner, monkeypatch
 ) -> None:
     del temp_config_dir
-    cli_module = importlib.import_module("holded_cli.cli")
-    state_module = importlib.import_module("holded_cli.state")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    state_module = importlib.import_module("holded_tt_cli.state")
 
     calls: list[bool] = []
     sentinel_state = state_module.AppState(
@@ -90,18 +90,18 @@ def test_root_callback_bootstraps_shared_state(
 
 
 def test_track_help_includes_usage_example(runner) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["track", "--help"])
 
     assert result.exit_code == 0
-    assert "holded track --from 2026-04-01 --to 2026-04-30" in result.stdout
+    assert "holded-tt track --from 2026-04-01 --to 2026-04-30" in result.stdout
     assert "show" in result.stdout
     assert "update" in result.stdout
 
 
 def test_config_help_lists_show_and_set(runner) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["config", "--help"])
 
@@ -113,7 +113,7 @@ def test_config_help_lists_show_and_set(runner) -> None:
 def test_config_without_subcommand_defaults_to_show(
     temp_config_dir, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
     _patch_runtime_files(temp_config_dir, monkeypatch)
 
     result = runner.invoke(cli_module.app, ["config"])
@@ -128,20 +128,20 @@ def test_workplaces_without_session_shows_auth_error(
 ) -> None:
     _patch_runtime_files(tmp_path, monkeypatch)
     # No session file written → MissingAuthenticationError
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["workplaces"])
 
     # No session → operational error (exit 2) with a plain-language hint
     assert result.exit_code == 2
     assert "Traceback" not in result.stdout
-    assert "holded login" in result.stderr
+    assert "holded-tt login" in result.stderr
 
 
 def test_config_show_prints_defaults_and_local_paths(
     temp_config_dir, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
     _patch_runtime_files(temp_config_dir, monkeypatch)
 
     result = runner.invoke(cli_module.app, ["config", "show"])
@@ -157,8 +157,8 @@ def test_config_show_prints_defaults_and_local_paths(
 
 
 def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
-    config_module = importlib.import_module("holded_cli.config")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    config_module = importlib.import_module("holded_tt_cli.config")
     _patch_runtime_files(temp_config_dir, monkeypatch)
 
     result = runner.invoke(
@@ -175,7 +175,7 @@ def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) 
 def test_config_set_rejects_unknown_keys_with_friendly_error(
     temp_config_dir, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
     _patch_runtime_files(temp_config_dir, monkeypatch)
 
     result = runner.invoke(

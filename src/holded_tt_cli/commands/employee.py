@@ -10,9 +10,9 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 
-from holded_cli.console import get_output_console
-from holded_cli.holded_client import HoldedClient
-from holded_cli.state import AppState
+from holded_tt_cli.console import get_output_console
+from holded_tt_cli.holded_client import HoldedClient
+from holded_tt_cli.state import AppState
 
 
 def _render_value(value: object) -> str:

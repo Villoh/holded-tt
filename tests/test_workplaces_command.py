@@ -11,8 +11,8 @@ def _fake_state() -> SimpleNamespace:
 
 
 def _patch(monkeypatch, fake_state, workplaces: list[dict]):
-    cli_module = importlib.import_module("holded_cli.cli")
-    workplaces_module = importlib.import_module("holded_cli.commands.workplaces")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    workplaces_module = importlib.import_module("holded_tt_cli.commands.workplaces")
 
     class FakeClient:
         def __enter__(self): return self

@@ -13,7 +13,7 @@ import typer
 EMPLOYEE_COMMAND_PATH = (
     Path(__file__).resolve().parents[1]
     / "src"
-    / "holded_cli"
+    / "holded_tt_cli"
     / "commands"
     / "employee.py"
 )
@@ -21,7 +21,7 @@ EMPLOYEE_COMMAND_PATH = (
 
 def _load_employee_module():
     spec = importlib.util.spec_from_file_location(
-        "test_holded_cli_commands_employee", EMPLOYEE_COMMAND_PATH
+        "test_holded_tt_cli_commands_employee", EMPLOYEE_COMMAND_PATH
     )
     assert spec is not None
     assert spec.loader is not None

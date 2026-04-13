@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from holded_cli.errors import HoldedCliError
+from holded_tt_cli.errors import HoldedCliError
 
 
 HOLDED_BASE_URL = "https://app.holded.com"
@@ -16,14 +16,16 @@ AUTH_FRESHNESS_DAYS = 30
 @dataclass(slots=True)
 class LoginStep:
     two_factor_required: bool
-    masked_contact: str | None = None  # where the 2FA code was sent (e.g. "m***@domain.com")
+    masked_contact: str | None = (
+        None  # where the 2FA code was sent (e.g. "m***@domain.com")
+    )
 
 
 class MissingAuthenticationError(HoldedCliError):
     def __init__(self) -> None:
         super().__init__(
             message="No saved Holded session is available.",
-            hint="Run `holded login` to authenticate and save a new session.",
+            hint="Run `holded-tt login` to authenticate and save a new session.",
         )
 
 
@@ -31,7 +33,7 @@ class ExpiredAuthenticationError(HoldedCliError):
     def __init__(self) -> None:
         super().__init__(
             message="The saved Holded session is too old to trust.",
-            hint="Run `holded login` to refresh the saved session.",
+            hint="Run `holded-tt login` to refresh the saved session.",
         )
 
 
@@ -145,7 +147,7 @@ class HoldedAuthClient:
             body = exc.response.text[:300].strip()
             raise HoldedCliError(
                 message=f"2FA confirmation failed (HTTP {exc.response.status_code}): {body}",
-                hint="Check your 2FA code and try `holded login` again.",
+                hint="Check your 2FA code and try `holded-tt login` again.",
             ) from exc
 
         try:
@@ -189,20 +191,20 @@ class HoldedAuthClient:
             body = exc.response.text[:300].strip()
             raise HoldedCliError(
                 message=f"Holded rejected the authentication request (HTTP {exc.response.status_code}): {body}",
-                hint="Check your credentials or 2FA code, then run `holded login` again.",
+                hint="Check your credentials or 2FA code, then run `holded-tt login` again.",
             ) from exc
         try:
             payload = response.json()
         except ValueError as exc:
             raise HoldedCliError(
                 message="Holded returned an unreadable authentication response.",
-                hint="Try `holded login` again. If the problem persists, Holded may have changed its auth flow.",
+                hint="Try `holded-tt login` again. If the problem persists, Holded may have changed its auth flow.",
             ) from exc
 
         if not isinstance(payload, dict):
             raise HoldedCliError(
                 message="Holded returned an unexpected authentication response.",
-                hint="Try `holded login` again. If the problem persists, Holded may have changed its auth flow.",
+                hint="Try `holded-tt login` again. If the problem persists, Holded may have changed its auth flow.",
             )
 
         return payload
@@ -227,5 +229,5 @@ class HoldedAuthClient:
         except httpx.HTTPError as exc:
             raise HoldedCliError(
                 message="Holded authentication could not be completed.",
-                hint="Check your network connection and run `holded login` again.",
+                hint="Check your network connection and run `holded-tt login` again.",
             ) from exc

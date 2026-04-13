@@ -4,7 +4,7 @@ import importlib
 from dataclasses import dataclass
 from types import SimpleNamespace
 
-from holded_cli.errors import HoldedCliError
+from holded_tt_cli.errors import HoldedCliError
 
 
 @dataclass
@@ -23,8 +23,8 @@ class FakeSessionStore:
 
 
 def test_login_prompts_for_two_factor_only_when_required(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
-    login_module = importlib.import_module("holded_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    login_module = importlib.import_module("holded_tt_cli.commands.login")
 
     session_store = FakeSessionStore()
     state = SimpleNamespace(session_store=session_store)
@@ -79,8 +79,8 @@ def test_login_prompts_for_two_factor_only_when_required(runner, monkeypatch) ->
 
 
 def test_login_skips_two_factor_prompt_when_not_required(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
-    login_module = importlib.import_module("holded_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    login_module = importlib.import_module("holded_tt_cli.commands.login")
 
     session_store = FakeSessionStore()
     state = SimpleNamespace(session_store=session_store)
@@ -120,8 +120,8 @@ def test_login_skips_two_factor_prompt_when_not_required(runner, monkeypatch) ->
 
 
 def test_login_surfaces_auth_failures_without_traceback(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_cli.cli")
-    login_module = importlib.import_module("holded_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    login_module = importlib.import_module("holded_tt_cli.commands.login")
 
     state = SimpleNamespace(session_store=FakeSessionStore())
 
@@ -138,7 +138,7 @@ def test_login_surfaces_auth_failures_without_traceback(runner, monkeypatch) -> 
         def primary_login(self, email: str, password: str) -> DummyLoginStep:
             raise HoldedCliError(
                 message="Authentication failed.",
-                hint="Run `holded login` again after checking your credentials.",
+                hint="Run `holded-tt login` again after checking your credentials.",
             )
 
     monkeypatch.setattr(cli_module, "create_app_state", lambda: state)
@@ -153,7 +153,7 @@ def test_login_surfaces_auth_failures_without_traceback(runner, monkeypatch) -> 
     assert result.exit_code == 2
     assert "Error: Authentication failed." in result.stderr
     assert (
-        "Hint: Run `holded login` again after checking your credentials."
+        "Hint: Run `holded-tt login` again after checking your credentials."
         in result.stderr
     )
     assert "Traceback" not in result.stderr

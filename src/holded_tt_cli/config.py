@@ -5,7 +5,7 @@ import tomllib
 
 import tomli_w
 
-from holded_cli.paths import CONFIG_FILE
+from holded_tt_cli.paths import CONFIG_FILE
 
 
 @dataclass(slots=True)

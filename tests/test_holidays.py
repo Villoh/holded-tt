@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def test_extract_workplace_holidays_filters_by_type_and_status() -> None:
-    from holded_cli.holidays import extract_workplace_holidays
+    from holded_tt_cli.holidays import extract_workplace_holidays
 
     summary = {
         "workplaceTimeOffs": [
@@ -38,7 +38,7 @@ def test_extract_workplace_holidays_filters_by_type_and_status() -> None:
 
 
 def test_extract_workplace_holidays_ignores_other_years() -> None:
-    from holded_cli.holidays import extract_workplace_holidays
+    from holded_tt_cli.holidays import extract_workplace_holidays
 
     summary = {
         "workplaceTimeOffs": [
@@ -62,7 +62,7 @@ def test_extract_workplace_holidays_ignores_other_years() -> None:
 
 
 def test_get_cached_holidays_returns_none_for_wrong_year(tmp_path: Path) -> None:
-    from holded_cli.holidays import get_cached_holidays
+    from holded_tt_cli.holidays import get_cached_holidays
 
     cache_file = tmp_path / "holidays.json"
     cache_file.write_text(
@@ -76,7 +76,7 @@ def test_get_cached_holidays_returns_none_for_wrong_year(tmp_path: Path) -> None
 
 
 def test_get_cached_holidays_returns_dates_for_matching_year(tmp_path: Path) -> None:
-    from holded_cli.holidays import get_cached_holidays
+    from holded_tt_cli.holidays import get_cached_holidays
 
     cache_file = tmp_path / "holidays.json"
     cache_file.write_text(
@@ -92,7 +92,7 @@ def test_get_cached_holidays_returns_dates_for_matching_year(tmp_path: Path) -> 
 
 
 def test_get_cached_holidays_returns_none_for_missing_file(tmp_path: Path) -> None:
-    from holded_cli.holidays import get_cached_holidays
+    from holded_tt_cli.holidays import get_cached_holidays
 
     result = get_cached_holidays(tmp_path / "holidays.json", 2026)
 
@@ -100,7 +100,7 @@ def test_get_cached_holidays_returns_none_for_missing_file(tmp_path: Path) -> No
 
 
 def test_get_cached_holidays_skips_malformed_date_strings(tmp_path: Path) -> None:
-    from holded_cli.holidays import get_cached_holidays
+    from holded_tt_cli.holidays import get_cached_holidays
 
     cache_file = tmp_path / "holidays.json"
     cache_file.write_text(
@@ -119,7 +119,7 @@ def test_get_cached_holidays_skips_malformed_date_strings(tmp_path: Path) -> Non
 
 
 def test_load_cache_returns_empty_dict_on_corrupt_file(tmp_path: Path) -> None:
-    from holded_cli.holidays import _load_cache
+    from holded_tt_cli.holidays import _load_cache
 
     corrupt = tmp_path / "bad.json"
     corrupt.write_text("{ not valid json", encoding="utf-8")
@@ -130,7 +130,7 @@ def test_load_cache_returns_empty_dict_on_corrupt_file(tmp_path: Path) -> None:
 
 
 def test_save_cache_writes_valid_json_with_year_and_holidays(tmp_path: Path) -> None:
-    from holded_cli.holidays import _save_cache
+    from holded_tt_cli.holidays import _save_cache
 
     cache_file = tmp_path / "holidays.json"
     _save_cache(cache_file, 2026, ["2026-01-01", "2026-04-17"])
@@ -143,7 +143,7 @@ def test_save_cache_writes_valid_json_with_year_and_holidays(tmp_path: Path) -> 
 
 
 def test_save_cache_creates_parent_directories(tmp_path: Path) -> None:
-    from holded_cli.holidays import _save_cache
+    from holded_tt_cli.holidays import _save_cache
 
     nested = tmp_path / "a" / "b" / "holidays.json"
     _save_cache(nested, 2026, [])
@@ -153,7 +153,7 @@ def test_save_cache_creates_parent_directories(tmp_path: Path) -> None:
 
 def test_extract_workplace_holidays_uses_first_date_key_found() -> None:
     """Entry with multiple date keys: only the first valid key is used (break)."""
-    from holded_cli.holidays import extract_workplace_holidays
+    from holded_tt_cli.holidays import extract_workplace_holidays
 
     # Entry has both "date" and "startDate" — "date" is checked first
     summary = {
@@ -174,7 +174,7 @@ def test_extract_workplace_holidays_uses_first_date_key_found() -> None:
 
 
 def test_extract_workplace_holidays_skips_invalid_date_values() -> None:
-    from holded_cli.holidays import extract_workplace_holidays
+    from holded_tt_cli.holidays import extract_workplace_holidays
 
     summary = {
         "workplaceTimeOffs": [
@@ -190,7 +190,7 @@ def test_extract_workplace_holidays_skips_invalid_date_values() -> None:
 
 
 def test_current_year_paris_returns_plausible_year() -> None:
-    from holded_cli.holidays import _current_year_paris
+    from holded_tt_cli.holidays import _current_year_paris
 
     year = _current_year_paris()
 
@@ -203,20 +203,20 @@ def test_holidays_falls_back_to_utc_when_paris_timezone_is_unavailable(
 ) -> None:
     import zoneinfo
 
-    sys.modules.pop("holded_cli.holidays", None)
+    sys.modules.pop("holded_tt_cli.holidays", None)
     monkeypatch.setattr(
         zoneinfo,
         "ZoneInfo",
         lambda key: (_ for _ in ()).throw(zoneinfo.ZoneInfoNotFoundError(key)),
     )
 
-    holidays = importlib.import_module("holded_cli.holidays")
+    holidays = importlib.import_module("holded_tt_cli.holidays")
 
     assert holidays._PARIS_TZ == holidays.timezone.utc
 
 
 def test_fetch_holidays_fetches_from_api_when_cache_absent(tmp_path: Path) -> None:
-    from holded_cli.holidays import fetch_holidays
+    from holded_tt_cli.holidays import fetch_holidays
 
     cache_file = tmp_path / "holidays.json"
 
@@ -242,7 +242,7 @@ def test_fetch_holidays_fetches_from_api_when_cache_absent(tmp_path: Path) -> No
 
 
 def test_fetch_holidays_returns_cache_without_api_call(tmp_path: Path) -> None:
-    from holded_cli.holidays import fetch_holidays
+    from holded_tt_cli.holidays import fetch_holidays
 
     cache_file = tmp_path / "holidays.json"
     cache_file.write_text(

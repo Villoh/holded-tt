@@ -6,10 +6,10 @@ from typing import Any
 import typer
 from rich.text import Text
 
-from holded_cli.console import get_output_console
-from holded_cli.errors import InputError
-from holded_cli.holded_client import HoldedApiError, HoldedClient
-from holded_cli.state import AppState
+from holded_tt_cli.console import get_output_console
+from holded_tt_cli.errors import InputError
+from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+from holded_tt_cli.state import AppState
 
 
 CLOCK_HELP = "Real-time clock-in, clock-out, pause, and resume."
@@ -39,6 +39,7 @@ def _elapsed(start_iso: str) -> str:
 
 def _local_hhmm(utc_iso: str, tz_name: str) -> str:
     from zoneinfo import ZoneInfo
+
     dt = datetime.fromisoformat(utc_iso)
     return dt.astimezone(ZoneInfo(tz_name)).strftime("%H:%M")
 
@@ -48,7 +49,7 @@ def _require_active(client: HoldedClient) -> dict[str, Any]:
     if tracker is None:
         raise InputError(
             message="No active tracker.",
-            hint="Run `holded clock in` to start one.",
+            hint="Run `holded-tt clock in` to start one.",
         )
     return tracker
 
@@ -106,12 +107,14 @@ def in_command(ctx: typer.Context) -> None:
         if existing:
             raise InputError(
                 message="A tracker is already running.",
-                hint="Run `holded clock out` to stop it first.",
+                hint="Run `holded-tt clock out` to stop it first.",
             )
         client.clock_in()
         tracker = client.get_current_tracker()
 
-    start_local = _local_hhmm(tracker["start"], state.config.timezone) if tracker else "?"
+    start_local = (
+        _local_hhmm(tracker["start"], state.config.timezone) if tracker else "?"
+    )
     line = Text()
     line.append("✓  Clocked in", style="green bold")
     line.append(f"  at {start_local}", style="dim")
@@ -149,7 +152,7 @@ def pause_command(ctx: typer.Context) -> None:
         if tracker.get("paused"):
             raise InputError(
                 message="Tracker is already paused.",
-                hint="Run `holded clock resume` to continue.",
+                hint="Run `holded-tt clock resume` to continue.",
             )
         client.pause_tracker(tracker["id"])
 
@@ -169,11 +172,13 @@ def resume_command(ctx: typer.Context) -> None:
         if not tracker.get("paused"):
             raise InputError(
                 message="Tracker is not paused.",
-                hint="Run `holded clock pause` to pause it first.",
+                hint="Run `holded-tt clock pause` to pause it first.",
             )
         result = client.resume_tracker(tracker["id"])
 
-    pause_start = (tracker.get("currentPause") or {}).get("start") or result.get("end") or ""
+    pause_start = (
+        (tracker.get("currentPause") or {}).get("start") or result.get("end") or ""
+    )
     duration_str = f"  ·  paused {_elapsed(pause_start)}" if pause_start else ""
     line = Text()
     line.append("✓  Resumed", style="green bold")

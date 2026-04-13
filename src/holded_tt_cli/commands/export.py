@@ -8,11 +8,11 @@ from zoneinfo import ZoneInfo
 import typer
 from rich.text import Text
 
-from holded_cli.console import get_output_console
-from holded_cli.dates import parse_date
-from holded_cli.errors import InputError
-from holded_cli.holded_client import HoldedClient
-from holded_cli.state import AppState
+from holded_tt_cli.console import get_output_console
+from holded_tt_cli.dates import parse_date
+from holded_tt_cli.errors import InputError
+from holded_tt_cli.holded_client import HoldedClient
+from holded_tt_cli.state import AppState
 
 
 _ES_MONTHS = {
@@ -51,7 +51,7 @@ def _fmt_duration(seconds: int) -> str:
 
 
 def _default_export_path(from_date: date, to_date: date, fmt: str) -> Path:
-    base_name = f"holded-{from_date}_{to_date}"
+    base_name = f"holded-tt-{from_date}_{to_date}"
     candidate = Path.cwd() / f"{base_name}.{fmt}"
 
     if not candidate.exists():
@@ -223,9 +223,9 @@ def export_command(
     """Export time-tracking records as PDF or Excel for a date range.
 
     Example:
-      holded export --from 2026-04-01 --to 2026-04-30
-      holded export --from 2026-04-01 --to 2026-04-30 --format xlsx
-      holded export --from 2026-04-01 --to 2026-04-30 --format xlsx --company 'ACME S.L.'
+      holded-tt export --from 2026-04-01 --to 2026-04-30
+      holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx
+      holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx --company 'ACME S.L.'
     """
     state: AppState = ctx.obj
 

@@ -13,8 +13,8 @@ def _fake_state() -> SimpleNamespace:
 
 
 def _patch(monkeypatch, fake_state, employees: list[dict]):
-    cli_module = importlib.import_module("holded_cli.cli")
-    employees_module = importlib.import_module("holded_cli.commands.employees")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    employees_module = importlib.import_module("holded_tt_cli.commands.employees")
 
     class FakeClient:
         def __enter__(self):
@@ -33,7 +33,7 @@ def _patch(monkeypatch, fake_state, employees: list[dict]):
 
 @pytest.mark.parametrize("value", [None, ""])
 def test_string_value_returns_default_for_empty_values(value) -> None:
-    employees_module = importlib.import_module("holded_cli.commands.employees")
+    employees_module = importlib.import_module("holded_tt_cli.commands.employees")
 
     assert employees_module._string_value(value, "fallback") == "fallback"
 
@@ -41,7 +41,7 @@ def test_string_value_returns_default_for_empty_values(value) -> None:
 def test_get_nested_str_returns_placeholder_when_intermediate_value_is_not_dict() -> (
     None
 ):
-    employees_module = importlib.import_module("holded_cli.commands.employees")
+    employees_module = importlib.import_module("holded_tt_cli.commands.employees")
 
     assert (
         employees_module._get_nested_str(

@@ -8,9 +8,9 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-from holded_cli.auth import MissingAuthenticationError, require_saved_session
-from holded_cli.errors import HoldedCliError
-from holded_cli.session import SessionStore
+from holded_tt_cli.auth import MissingAuthenticationError, require_saved_session
+from holded_tt_cli.errors import HoldedCliError
+from holded_tt_cli.session import SessionStore
 
 
 HOLDED_BASE_URL = "https://app.holded.com"
@@ -73,7 +73,7 @@ class HoldedClient:
         except httpx.HTTPStatusError as exc:
             raise HoldedApiError(
                 message=f"PDF export failed (HTTP {exc.response.status_code}).",
-                hint="Check your session with `holded session` and try again.",
+                hint="Check your session with `holded-tt session` and try again.",
             ) from exc
         return response.content
 
@@ -184,7 +184,7 @@ class HoldedClient:
         except httpx.HTTPStatusError as exc:
             raise HoldedApiError(
                 message=f"Clock-out failed (HTTP {exc.response.status_code}).",
-                hint="Check your session with `holded session` and try again.",
+                hint="Check your session with `holded-tt session` and try again.",
             ) from exc
 
     def pause_tracker(self, tracker_id: str) -> dict[str, Any]:
@@ -220,7 +220,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_cli.holded_client import HoldedApiError
+            from holded_tt_cli.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
@@ -236,7 +236,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_cli.holded_client import HoldedApiError
+            from holded_tt_cli.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
@@ -250,7 +250,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_cli.holded_client import HoldedApiError
+            from holded_tt_cli.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
@@ -295,12 +295,12 @@ class HoldedClient:
         except httpx.HTTPStatusError as exc:
             raise HoldedApiError(
                 message=f"Holded API returned HTTP {exc.response.status_code}.",
-                hint="Run `holded login` if your session has expired.",
+                hint="Run `holded-tt login` if your session has expired.",
             ) from exc
         try:
             return response.json()
         except ValueError as exc:
             raise HoldedApiError(
                 message="Holded returned an unreadable response.",
-                hint="The API may have changed. Check your session with `holded session`.",
+                hint="The API may have changed. Check your session with `holded-tt session`.",
             ) from exc

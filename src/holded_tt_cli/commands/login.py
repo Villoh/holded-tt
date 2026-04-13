@@ -3,8 +3,8 @@ from __future__ import annotations
 import typer
 from rich.text import Text
 
-from holded_cli.auth import HoldedAuthClient
-from holded_cli.console import get_output_console
+from holded_tt_cli.auth import HoldedAuthClient
+from holded_tt_cli.console import get_output_console
 
 
 def login_command(ctx: typer.Context) -> None:

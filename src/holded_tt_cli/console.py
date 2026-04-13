@@ -6,7 +6,7 @@ from typing import TextIO
 
 from rich.console import Console
 
-from holded_cli.errors import HoldedCliError
+from holded_tt_cli.errors import HoldedCliError
 
 
 def get_output_console(file: TextIO | None = None) -> Console:

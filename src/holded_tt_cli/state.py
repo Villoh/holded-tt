@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from holded_cli.config import AppConfig, load_config
-from holded_cli.paths import CONFIG_DIR, CONFIG_FILE, HOLIDAYS_FILE, SESSION_FILE
-from holded_cli.session import SessionStore
+from holded_tt_cli.config import AppConfig, load_config
+from holded_tt_cli.paths import CONFIG_DIR, CONFIG_FILE, HOLIDAYS_FILE, SESSION_FILE
+from holded_tt_cli.session import SessionStore
 
 
 @dataclass(slots=True)

@@ -5,13 +5,13 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from holded_cli.config import save_config
-from holded_cli.console import get_output_console
-from holded_cli.errors import InputError
-from holded_cli.state import AppState
+from holded_tt_cli.config import save_config
+from holded_tt_cli.console import get_output_console
+from holded_tt_cli.errors import InputError
+from holded_tt_cli.state import AppState
 
 
-CONFIG_HELP = "Inspect or update local Holded CLI defaults."
+CONFIG_HELP = "Inspect or update local Holded TT CL defaults."
 
 app = typer.Typer(help=CONFIG_HELP)
 
@@ -60,7 +60,9 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("[dim]holidays[/dim]", Text(str(state.holidays_file), style="dim"))
 
     get_output_console().print(
-        Panel(grid, title="[bold]Configuration[/bold]", title_align="left", padding=(1, 2))
+        Panel(
+            grid, title="[bold]Configuration[/bold]", title_align="left", padding=(1, 2)
+        )
     )
 
 
@@ -83,11 +85,11 @@ def set_command(
 
     Example:
 
-      holded config set defaults.workplace_id <workplace_id>
+      holded-tt config set defaults.workplace_id <workplace_id>
 
-      holded config set defaults.start 09:00
+      holded-tt config set defaults.start 09:00
 
-      holded config set defaults.timezone Europe/Madrid
+      holded-tt config set defaults.timezone Europe/Madrid
     """
 
     state = _get_state(ctx)

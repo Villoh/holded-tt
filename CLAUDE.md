@@ -1,11 +1,11 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**Holded CLI**
+**Holded TT CLI**
 
-A Python CLI tool (`holded`) that automates time-tracking on [Holded](https://app.holded.com) — a Spanish HR SaaS. The primary use case is bulk-registering work days for a date range with a single command, skipping weekends and public holidays automatically. It handles the full authentication flow (email + 2FA) and persists session cookies for subsequent use.
+A Python CLI tool (`holded-tt`) that automates time-tracking on [Holded](https://app.holded.com) — a Spanish HR SaaS. The primary use case is bulk-registering work days for a date range with a single command, skipping weekends and public holidays automatically. It handles the full authentication flow (email + 2FA) and persists session cookies for subsequent use.
 
-**Core Value:** `holded track --from YYYY-MM-DD --to YYYY-MM-DD` registers all working days in a range without manual effort — weekends and holidays filtered automatically.
+**Core Value:** `holded-tt track --from YYYY-MM-DD --to YYYY-MM-DD` registers all working days in a range without manual effort — weekends and holidays filtered automatically.
 
 ### Constraints
 
@@ -42,11 +42,11 @@ A Python CLI tool (`holded`) that automates time-tracking on [Holded](https://ap
 # Install as isolated tool (end users)
 # Install from local directory (dev/testing)
 ## Cross-Platform Config Directory
-| Platform | `user_config_dir("holded-cli")` returns |
+| Platform | `user_config_dir("holded-tt-cli")` returns |
 |----------|-----------------------------------------|
-| Linux | `~/.config/holded-cli` (respects `$XDG_CONFIG_HOME`) |
-| macOS | `~/Library/Application Support/holded-cli` |
-| Windows | `C:\Users\<user>\AppData\Local\holded-cli` |
+| Linux | `~/.config/holded-tt-cli` (respects `$XDG_CONFIG_HOME`) |
+| macOS | `~/Library/Application Support/holded-tt-cli` |
+| Windows | `C:\Users\<user>\AppData\Roaming\holded-tt-cli` |
 ## Cross-Platform File Permissions (0600 Best-Effort)
 ### Pattern
 ## pytest Setup for Typer CLI Testing

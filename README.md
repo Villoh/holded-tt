@@ -1,6 +1,6 @@
-# Holded CLI
+# Holded TT CLI
 
-`holded` is an unofficial Python CLI for automating time tracking on [Holded](https://app.holded.com).
+`holded-tt` is an unofficial Python CLI for automating time tracking on [Holded](https://app.holded.com).
 It is a focused time-tracking tool, not a general-purpose Holded client.
 
 > [!IMPORTANT]
@@ -13,7 +13,7 @@ It is a focused time-tracking tool, not a general-purpose Holded client.
 
 - Python 3.11+
 - A Holded account with time tracking enabled
-- An interactive terminal for `holded login` (email/password prompt, plus 2FA prompt when required)
+- An interactive terminal for `holded-tt login` (email/password prompt, plus 2FA prompt when required)
 
 ```bash
 # Editable install for development
@@ -28,40 +28,40 @@ uv tool install .
 After installation, you can check the global CLI version with:
 
 ```bash
-holded --version
+holded-tt --version
 ```
 
 ## Quick start
 
 ```bash
 # 1. Authenticate
-holded login
+holded-tt login
 
 # 2. Check your workplace ID
-holded workplaces
+holded-tt workplaces
 
 # Optional: inspect your profile and organization directory
-holded employee
-holded organization
+holded-tt employee
+holded-tt organization
 
 # 3. Save your defaults
-holded config set defaults.workplace_id <id>
-holded config set defaults.start 09:00
-holded config set defaults.end 18:00
-holded config set defaults.timezone Europe/Madrid
+holded-tt config set defaults.workplace_id <id>
+holded-tt config set defaults.start 09:00
+holded-tt config set defaults.end 18:00
+holded-tt config set defaults.timezone Europe/Madrid
 
 # 4. Register a date range (preview first)
-holded track --from 2026-01-07 --to 2026-04-07 --dry-run
-holded track --from 2026-01-07 --to 2026-04-07
+holded-tt track --from 2026-01-07 --to 2026-04-07 --dry-run
+holded-tt track --from 2026-01-07 --to 2026-04-07
 ```
 
 ## Runtime storage
 
-The CLI stores its runtime files in a per-user config directory resolved via `platformdirs` as `holded-cli`.
+The CLI stores its runtime files in a per-user config directory resolved via `platformdirs` as `holded-tt-cli`.
 
-- Linux: `~/.config/holded-cli`
-- macOS: `~/Library/Application Support/holded-cli`
-- Windows: `C:\Users\<user>\AppData\Roaming\holded-cli`
+- Linux: `~/.config/holded-tt-cli`
+- macOS: `~/Library/Application Support/holded-tt-cli`
+- Windows: `C:\Users\<user>\AppData\Roaming\holded-tt-cli`
 
 Files created there:
 
@@ -73,85 +73,85 @@ Files created there:
 
 ## Commands
 
-### `holded login`
+### `holded-tt login`
 Authenticates with Holded interactively and saves the session locally.
 
 The command always prompts for your email and password. If Holded requires two-factor authentication, it then prompts for the 2FA code and completes the login flow.
 
 ```bash
-holded login
+holded-tt login
 ```
 
 ---
 
-### `holded session`
+### `holded-tt session`
 Shows the saved session status and when it was last refreshed.
 
 ```bash
-holded session
+holded-tt session
 ```
 
 ---
 
-### `holded workplaces`
+### `holded-tt workplaces`
 Lists all workplace IDs and names available in your account. Use the ID to configure your default workplace.
 
 ```bash
-holded workplaces
+holded-tt workplaces
 ```
 
 ---
 
-### `holded employee`
+### `holded-tt employee`
 Shows your merged employee profile by combining the Holded employee and personal-info endpoints.
 
 ```bash
-holded employee
+holded-tt employee
 ```
 
 ---
 
-### `holded organization`
+### `holded-tt organization`
 Lists organization employees from the Holded Teamzone organization endpoint.
 
 ```bash
-holded organization
+holded-tt organization
 ```
 
 ---
 
-### `holded track`
+### `holded-tt track`
 Registers working days on Holded for a date range. Weekends and workplace holidays are skipped automatically.
 
 ```bash
 # Register a full month
-holded track --from 2026-04-01 --to 2026-04-30
+holded-tt track --from 2026-04-01 --to 2026-04-30
 
 # Register today only
-holded track --today
+holded-tt track --today
 
 # Preview without submitting
-holded track --from 2026-04-01 --to 2026-04-30 --dry-run
+holded-tt track --from 2026-04-01 --to 2026-04-30 --dry-run
 
 # Override defaults for a single run
-holded track --from 2026-04-01 --to 2026-04-30 \
+holded-tt track --from 2026-04-01 --to 2026-04-30 \
              --start 08:30 --end 17:00 \
              --pause 13:00-14:00 \
              --workplace <id>
 
 # Include weekends or holidays
-holded track --from 2026-04-01 --to 2026-04-30 \
+holded-tt track --from 2026-04-01 --to 2026-04-30 \
              --include-weekends \
              --include-holidays
 
 # Skip confirmation for large submissions
-holded track --from 2026-01-01 --to 2026-12-31 --yes
+holded-tt track --from 2026-01-01 --to 2026-12-31 --yes
 ```
 
 Notes:
 
 - Use either `--today` or both `--from YYYY-MM-DD` and `--to YYYY-MM-DD`.
-- `holded track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
+- `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
 - `--dry-run` still uses `holidays.json` if that cache already exists.
@@ -161,24 +161,24 @@ Subcommands:
 
 ```bash
 # Inspect tracked entries and tracker IDs for a single day
-holded track show --date 2026-04-10
+holded-tt track show --date 2026-04-10
 
 # Inspect a date range
-holded track show --from 2026-04-07 --to 2026-04-10
+holded-tt track show --from 2026-04-07 --to 2026-04-10
 
 # Update a date range, one existing tracker per day
-holded track update --from 2026-04-07 --to 2026-04-10 --end 17:00
+holded-tt track update --from 2026-04-07 --to 2026-04-10 --end 17:00
 
 # Include weekends or holidays when updating a range
-holded track update --from 2026-04-07 --to 2026-04-10 \
+holded-tt track update --from 2026-04-07 --to 2026-04-10 \
                     --include-weekends --include-holidays \
                     --end 17:00
 
 # Update a single existing tracker by its tracker ID
-holded track update --date 2026-04-10 --tracker-id <tracker_id> --end 17:00
+holded-tt track update --date 2026-04-10 --tracker-id <tracker_id> --end 17:00
 
 # Replace the pause windows explicitly
-holded track update --date 2026-04-10 --tracker-id <tracker_id> \
+holded-tt track update --date 2026-04-10 --tracker-id <tracker_id> \
                     --start 08:30 --end 17:00 \
                     --pause 14:00-14:30
 ```
@@ -189,7 +189,7 @@ Notes for `track show` and `track update`:
 - `track show` is intended to help you discover the `tracker.id` values returned by Holded and inspect the current `Time`, `Pauses`, `Status`, `Approved`, `Method`, and `Remote` fields.
 - `track update` updates either a single tracker (`--date` + `--tracker-id`) or a date range (`--from/--to` or `--today`).
 - Single-tracker updates require both `--tracker-id` and either `--date` or `--today`.
-- Range updates filter weekends and workplace holidays by default, just like `holded track`. Use `--include-weekends` and `--include-holidays` to opt in. These flags only affect range updates.
+- Range updates filter weekends and workplace holidays by default, just like `holded-tt track`. Use `--include-weekends` and `--include-holidays` to opt in. These flags only affect range updates.
 - Range updates are strict: each target day must have exactly one existing tracker. Days with zero trackers, multiple trackers, or running trackers raise an error.
 - Range updates are processed one tracker at a time, not atomically. If a later day fails, earlier days in the same command may already have been updated.
 - If `--start` or `--end` is omitted during `track update`, the CLI keeps the existing value from Holded.
@@ -198,57 +198,57 @@ Notes for `track show` and `track update`:
 
 ---
 
-### `holded clock`
+### `holded-tt clock`
 Real-time clock-in, clock-out, pause, and resume.
 
 ```bash
 # Show current tracker status
-holded clock
-holded clock status
+holded-tt clock
+holded-tt clock status
 
 # Start and stop a live tracker
-holded clock in
-holded clock out
+holded-tt clock in
+holded-tt clock out
 
 # Pause and resume the active tracker
-holded clock pause
-holded clock resume
+holded-tt clock pause
+holded-tt clock resume
 ```
 
-`holded clock` without a subcommand behaves like a status check.
+`holded-tt clock` without a subcommand behaves like a status check.
 
 ---
 
-### `holded export`
+### `holded-tt export`
 Exports time-tracking records for a date range as PDF or Excel.
 
 The PDF is the official Holded report. The Excel replicates the official layout: company, employee, month title, and a row per calendar day with schedule, hours, workplace, and approval status.
 
 ```bash
 # Export as PDF (default)
-holded export --from 2026-04-01 --to 2026-04-30
+holded-tt export --from 2026-04-01 --to 2026-04-30
 
 # Export as Excel
-holded export --from 2026-04-01 --to 2026-04-30 --format xlsx
+holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx
 
 # Include company name in the Excel header
-holded export --from 2026-04-01 --to 2026-04-30 --format xlsx --company "ACME S.L."
+holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx --company "ACME S.L."
 
 # Save to a specific path
-holded export --from 2026-04-01 --to 2026-04-30 --out ~/Desktop/abril.pdf
+holded-tt export --from 2026-04-01 --to 2026-04-30 --out ~/Desktop/abril.pdf
 ```
 
-If `--out` is omitted, the file is saved to the current directory as `holded-{from}_{to}.{format}`.
+If `--out` is omitted, the file is saved to the current directory as `holded-tt-{from}_{to}.{format}`.
 
 ---
 
-### `holded config`
+### `holded-tt config`
 Inspects or updates local defaults. Run without arguments to show current values.
 
 ```bash
-holded config
-holded config show
-holded config set <key> <value>
+holded-tt config
+holded-tt config show
+holded-tt config set <key> <value>
 ```
 
 Actual built-in defaults used when `config.toml` is first created:
@@ -270,20 +270,20 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.timezone`      | Timezone for submitted entries     | `Europe/Madrid`      |
 
 ```bash
-holded config set defaults.workplace_id <workplace_id>
-holded config set defaults.start 09:00
-holded config set defaults.end 18:00
-holded config set defaults.timezone Europe/Madrid
+holded-tt config set defaults.workplace_id <workplace_id>
+holded-tt config set defaults.start 09:00
+holded-tt config set defaults.end 18:00
+holded-tt config set defaults.timezone Europe/Madrid
 ```
 
 ---
 
 ## Session troubleshooting
 
-- Run `holded session` to inspect whether a saved session exists and when it was last refreshed.
-- If commands report that no saved session is available, run `holded login` again.
-- If commands report that the saved session is too old to trust, re-run `holded login` to refresh it.
-- If `holded login` fails during 2FA, verify the code and try again.
+- Run `holded-tt session` to inspect whether a saved session exists and when it was last refreshed.
+- If commands report that no saved session is available, run `holded-tt login` again.
+- If commands report that the saved session is too old to trust, re-run `holded-tt login` to refresh it.
+- If `holded-tt login` fails during 2FA, verify the code and try again.
 
 ## Development
 
@@ -295,7 +295,7 @@ uv sync
 uv sync --dev
 
 # Run the CLI locally
-uv run holded --help
+uv run holded-tt --help
 
 # Run tests
 uv run pytest

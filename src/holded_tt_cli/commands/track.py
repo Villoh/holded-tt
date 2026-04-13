@@ -10,12 +10,12 @@ from rich import box as rich_box
 from rich.table import Table
 from rich.text import Text
 
-from holded_cli.console import get_output_console, render_error
-from holded_cli.dates import date_range, filter_holidays, filter_weekends, parse_date
-from holded_cli.errors import HoldedCliError, InputError
-from holded_cli.holded_client import HoldedClient
-from holded_cli.holidays import fetch_holidays, get_cached_holidays
-from holded_cli.state import AppState
+from holded_tt_cli.console import get_output_console, render_error
+from holded_tt_cli.dates import date_range, filter_holidays, filter_weekends, parse_date
+from holded_tt_cli.errors import HoldedCliError, InputError
+from holded_tt_cli.holded_client import HoldedClient
+from holded_tt_cli.holidays import fetch_holidays, get_cached_holidays
+from holded_tt_cli.state import AppState
 
 
 TRACK_HELP = """Register working days in a date range on Holded.
@@ -23,9 +23,9 @@ TRACK_HELP = """Register working days in a date range on Holded.
 Weekends and workplace holidays are excluded by default.
 
 Example:
-  holded track --from 2026-04-01 --to 2026-04-30
-  holded track --today
-  holded track --from 2026-04-01 --to 2026-04-30 --dry-run
+  holded-tt track --from 2026-04-01 --to 2026-04-30
+  holded-tt track --today
+  holded-tt track --from 2026-04-01 --to 2026-04-30 --dry-run
 """
 
 TRACK_UPDATE_HELP = """Update existing tracked days on Holded.
@@ -35,15 +35,15 @@ date range by resolving exactly one existing tracker per target day and sending
 updates one by one.
 
 Examples:
-  holded track update --date 2026-04-07 --tracker-id trk_123 --end 17:00
-  holded track update --from 2026-04-07 --to 2026-04-09 --end 17:00
+  holded-tt track update --date 2026-04-07 --tracker-id trk_123 --end 17:00
+  holded-tt track update --from 2026-04-07 --to 2026-04-09 --end 17:00
 """
 
 TRACK_SHOW_HELP = """Show tracked time entries and tracker IDs.
 
 Examples:
-  holded track show --date 2026-04-10
-  holded track show --from 2026-04-07 --to 2026-04-10
+  holded-tt track show --date 2026-04-10
+  holded-tt track show --from 2026-04-07 --to 2026-04-10
 """
 
 _PAUSE_RE = re.compile(r"^\d{2}:\d{2}-\d{2}:\d{2}$")
@@ -152,7 +152,7 @@ def _resolve_date_range(
     elif from_date or to_date:
         raise InputError(
             message="Both --from and --to are required when not using --today.",
-            hint="Provide both: holded track --from YYYY-MM-DD --to YYYY-MM-DD",
+            hint="Provide both: holded-tt track --from YYYY-MM-DD --to YYYY-MM-DD",
         )
     else:
         raise InputError(
@@ -311,7 +311,7 @@ def _resolve_tracker_for_update(
 
     raise InputError(
         message=f"Tracker {tracker_id} was not found on {target_day.isoformat()}.",
-        hint="Use `holded track show --date ...` to inspect the available tracker IDs.",
+        hint="Use `holded-tt track show --date ...` to inspect the available tracker IDs.",
     )
 
 
@@ -519,7 +519,7 @@ def track_command(
     """Register working days in Holded for a date range.
 
     Example:
-      holded track --from 2026-04-01 --to 2026-04-30
+      holded-tt track --from 2026-04-01 --to 2026-04-30
     """
     state: AppState = ctx.obj
 
@@ -689,7 +689,7 @@ def track_update_command(
         if not isinstance(current_start, str) or not isinstance(current_end, str):
             raise InputError(
                 message="The selected tracker is missing start/end data.",
-                hint="Inspect it with `holded track show --date ...` and try again.",
+                hint="Inspect it with `holded-tt track show --date ...` and try again.",
             )
 
         current_start_local = (

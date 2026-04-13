@@ -13,13 +13,13 @@ def runtime_paths_module(temp_config_dir):
     import sys
 
     for module_name in [
-        "holded_cli.paths",
-        "holded_cli.config",
-        "holded_cli.session",
+        "holded_tt_cli.paths",
+        "holded_tt_cli.config",
+        "holded_tt_cli.session",
     ]:
         sys.modules.pop(module_name, None)
 
-    return importlib.import_module("holded_cli.paths")
+    return importlib.import_module("holded_tt_cli.paths")
 
 
 def test_runtime_paths_use_fixed_files_and_create_config_dir(
@@ -37,9 +37,9 @@ def test_runtime_paths_use_fixed_files_and_create_config_dir(
 
 
 def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
-    from holded_cli import config as config_module
+    from holded_tt_cli import config as config_module
 
-    config_file = Path(temp_config_dir) / "holded-cli" / "config.toml"
+    config_file = Path(temp_config_dir) / "holded-tt-cli" / "config.toml"
     config_file.parent.mkdir(parents=True, exist_ok=True)
     config_module.CONFIG_FILE = config_file
 
@@ -69,7 +69,7 @@ def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
 def test_session_store_persists_cookies_and_saved_at(
     temp_config_dir, monkeypatch
 ) -> None:
-    from holded_cli import session as session_module
+    from holded_tt_cli import session as session_module
 
     chmod_calls: list[tuple[object, int]] = []
 
@@ -77,7 +77,7 @@ def test_session_store_persists_cookies_and_saved_at(
         chmod_calls.append((path, mode))
         raise PermissionError("best-effort only")
 
-    session_file = Path(temp_config_dir) / "holded-cli" / "session.json"
+    session_file = Path(temp_config_dir) / "holded-tt-cli" / "session.json"
     session_file.parent.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(session_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(session_module.os, "chmod", fake_chmod)
@@ -98,9 +98,9 @@ def test_session_store_persists_cookies_and_saved_at(
 
 
 def test_session_store_loads_missing_files_as_empty_state(temp_config_dir) -> None:
-    from holded_cli import session as session_module
+    from holded_tt_cli import session as session_module
 
-    session_file = Path(temp_config_dir) / "holded-cli" / "session.json"
+    session_file = Path(temp_config_dir) / "holded-tt-cli" / "session.json"
     session_file.parent.mkdir(parents=True, exist_ok=True)
     session_module.SESSION_FILE = session_file
 
@@ -112,9 +112,9 @@ def test_session_store_loads_missing_files_as_empty_state(temp_config_dir) -> No
 
 
 def test_session_store_reports_presence_from_loaded_state(temp_config_dir) -> None:
-    from holded_cli import session as session_module
+    from holded_tt_cli import session as session_module
 
-    session_file = Path(temp_config_dir) / "holded-cli" / "session.json"
+    session_file = Path(temp_config_dir) / "holded-tt-cli" / "session.json"
     session_file.parent.mkdir(parents=True, exist_ok=True)
     session_file.write_text(
         json.dumps({"cookies": {"hat": "secret"}, "saved_at": "2026-04-13T10:00:00Z"}),
@@ -132,7 +132,7 @@ def test_config_get_state_rejects_non_app_state() -> None:
     import click
     import typer
 
-    from holded_cli.commands.config import _get_state
+    from holded_tt_cli.commands.config import _get_state
 
     ctx = typer.Context(click.Command("config"))
     ctx.obj = object()

@@ -12,8 +12,8 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from holded_cli import __version__
-from holded_cli.commands import (
+from holded_tt_cli import __version__
+from holded_tt_cli.commands import (
     clock_app,
     employee_command,
     employees_command,
@@ -23,15 +23,15 @@ from holded_cli.commands import (
     track_app,
     workplaces_command,
 )
-from holded_cli.commands.clock import CLOCK_HELP
-from holded_cli.commands.config import CONFIG_HELP, set_command, show_command
-from holded_cli.console import render_error
-from holded_cli.errors import HoldedCliError
-from holded_cli.state import create_app_state
+from holded_tt_cli.commands.clock import CLOCK_HELP
+from holded_tt_cli.commands.config import CONFIG_HELP, set_command, show_command
+from holded_tt_cli.console import render_error
+from holded_tt_cli.errors import HoldedCliError
+from holded_tt_cli.state import create_app_state
 
 
 app = typer.Typer(
-    name="holded",
+    name="holded-tt",
     help="Holded time-tracking CLI.",
     invoke_without_command=True,
     pretty_exceptions_enable=False,
@@ -67,7 +67,7 @@ def main(
     version: bool = typer.Option(
         False,
         "--version",
-        help="Show the installed holded version and exit.",
+        help="Show the installed holded-tt version and exit.",
         callback=_version_callback,
         is_eager=True,
     ),
@@ -102,8 +102,8 @@ app.command(
     help=(
         "Export time-tracking records as PDF or Excel.\n\n"
         "Example:\n"
-        "  holded export --from 2026-04-01 --to 2026-04-30\n"
-        "  holded export --from 2026-04-01 --to 2026-04-30 --format xlsx"
+        "  holded-tt export --from 2026-04-01 --to 2026-04-30\n"
+        "  holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx"
     ),
 )(_with_cli_error_handling(export_command))
 config_app.command("show")(_with_cli_error_handling(show_command))

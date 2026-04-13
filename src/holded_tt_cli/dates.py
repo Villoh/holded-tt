@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from holded_cli.errors import InputError
+from holded_tt_cli.errors import InputError
 
 
 def date_range(from_date: date, to_date: date) -> list[date]:

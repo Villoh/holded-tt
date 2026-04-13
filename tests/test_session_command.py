@@ -19,12 +19,12 @@ def _write_session(session_file: Path, cookies: dict, saved_at: str | None) -> N
 
 def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect all runtime file paths to a temp directory. Returns the session file path."""
-    paths_module = importlib.import_module("holded_cli.paths")
-    session_module = importlib.import_module("holded_cli.session")
-    state_module = importlib.import_module("holded_cli.state")
-    config_module = importlib.import_module("holded_cli.config")
+    paths_module = importlib.import_module("holded_tt_cli.paths")
+    session_module = importlib.import_module("holded_tt_cli.session")
+    state_module = importlib.import_module("holded_tt_cli.state")
+    config_module = importlib.import_module("holded_tt_cli.config")
 
-    config_dir = base_dir / "holded-cli"
+    config_dir = base_dir / "holded-tt-cli"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
     holidays_file = config_dir / "holidays.json"
@@ -47,7 +47,7 @@ def test_session_reports_missing_when_no_session_file(
     tmp_path: Path, runner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     session_file = _patch_runtime_files(tmp_path, monkeypatch)
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["session"])
 
@@ -65,7 +65,7 @@ def test_session_reports_likely_valid_for_recent_session(
         cookies={"hat": "token", "PHPSESSID": "abc"},
         saved_at="2026-04-10T12:00:00Z",
     )
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["session"])
 
@@ -83,7 +83,7 @@ def test_session_shows_cookie_count(
         cookies={"hat": "tok", "PHPSESSID": "sid", "accountid": "aid"},
         saved_at="2026-04-10T08:00:00Z",
     )
-    cli_module = importlib.import_module("holded_cli.cli")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["session"])
 

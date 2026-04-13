@@ -7,7 +7,7 @@ import os
 import stat
 from pathlib import Path
 
-from holded_cli.paths import SESSION_FILE
+from holded_tt_cli.paths import SESSION_FILE
 
 
 EMPTY_SESSION = {"cookies": {}, "saved_at": None}

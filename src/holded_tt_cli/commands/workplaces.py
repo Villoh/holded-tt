@@ -4,9 +4,9 @@ import typer
 from rich import box as rich_box
 from rich.table import Table
 
-from holded_cli.console import get_output_console
-from holded_cli.holded_client import HoldedClient
-from holded_cli.state import AppState
+from holded_tt_cli.console import get_output_console
+from holded_tt_cli.holded_client import HoldedClient
+from holded_tt_cli.state import AppState
 
 
 def workplaces_command(ctx: typer.Context) -> None:
