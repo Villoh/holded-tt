@@ -143,12 +143,6 @@ holded config set defaults.timezone Europe/Madrid
 
 ---
 
-## Exit codes
-
-- `0 = success` — the command finished successfully.
-- `1 = input/usage error` — the command arguments or local input were invalid; run `holded --help` or the subcommand help to correct the request.
-- `2 = operational error` — the command could not complete because of runtime or environment conditions; retry after fixing the reported problem, such as configuration, network access, or authentication.
-
 ## Security note
 
 `session.json` stores sensitive authentication cookies. The CLI must never log those cookies, and file permissions are applied on a best-effort basis (0600 where supported).
