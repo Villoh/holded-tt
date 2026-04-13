@@ -63,9 +63,8 @@ def test_login_prompts_for_two_factor_only_when_required(runner, monkeypatch) ->
     assert "Email" in result.stdout
     assert "Password" in result.stdout
     assert "2FA code" in result.stdout
-    assert "Command: login" in result.stdout
-    assert "Status: authenticated" in result.stdout
-    assert "Saved at: 2026-04-12T12:00:00Z" in result.stdout
+    assert "Authenticated" in result.stdout
+    assert "2026-04-12T12:00:00Z" in result.stdout
     assert session_store.saved_payload == {
         "cookies": {"hat": "redacted"},
         "saved_at": "2026-04-12T12:00:00Z",

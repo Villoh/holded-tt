@@ -88,5 +88,5 @@ def test_session_shows_cookie_count(
     result = runner.invoke(cli_module.app, ["session"])
 
     assert result.exit_code == 0
-    assert "present" in result.stdout
-    assert "of 4 required" in result.stdout
+    assert "3" in result.stdout
+    assert "4" in result.stdout

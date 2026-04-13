@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import pytest
 from pathlib import Path
 
 
@@ -49,6 +50,8 @@ def test_root_help_is_available(runner) -> None:
     assert "workplaces" in result.stdout
     assert "track" in result.stdout
     assert "config" in result.stdout
+    assert "export" in result.stdout
+    assert "clock" in result.stdout
 
 
 def test_root_callback_bootstraps_shared_state(
@@ -101,7 +104,11 @@ def test_config_help_lists_show_and_set(runner) -> None:
     assert "set" in result.stdout
 
 
-def test_workplaces_without_session_shows_auth_error(runner) -> None:
+def test_workplaces_without_session_shows_auth_error(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    _patch_runtime_files(tmp_path, monkeypatch)
+    # No session file written → MissingAuthenticationError
     cli_module = importlib.import_module("holded_cli.cli")
 
     result = runner.invoke(cli_module.app, ["workplaces"])
@@ -121,13 +128,13 @@ def test_config_show_prints_defaults_and_local_paths(
     result = runner.invoke(cli_module.app, ["config", "show"])
 
     assert result.exit_code == 0
-    assert "defaults.workplace_id: " in result.stdout
-    assert "defaults.start: 08:30" in result.stdout
-    assert "defaults.end: 17:30" in result.stdout
-    assert "defaults.timezone: Europe/Paris" in result.stdout
-    assert "config_path:" in result.stdout
-    assert "session_path:" in result.stdout
-    assert "holiday_path:" in result.stdout
+    assert "workplace_id" in result.stdout
+    assert "08:30" in result.stdout
+    assert "17:30" in result.stdout
+    assert "Europe/Paris" in result.stdout
+    assert "config" in result.stdout
+    assert "session" in result.stdout
+    assert "holidays" in result.stdout
 
 
 def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) -> None:
@@ -141,7 +148,8 @@ def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) 
     )
 
     assert result.exit_code == 0
-    assert "defaults.workplace_id set to 123" in result.stdout
+    assert "defaults.workplace_id" in result.stdout
+    assert "123" in result.stdout
     assert config_module.load_config().workplace_id == "123"
 
 

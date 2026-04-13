@@ -194,6 +194,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "tzdata" },
 ]
 
 [package.metadata]
@@ -211,6 +212,7 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "tzdata", specifier = ">=2026.1" },
 ]
 
 [[package]]
