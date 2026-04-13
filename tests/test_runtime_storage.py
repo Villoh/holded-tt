@@ -109,3 +109,33 @@ def test_session_store_loads_missing_files_as_empty_state(temp_config_dir) -> No
     store = SessionStore()
 
     assert store.load() == {"cookies": {}, "saved_at": None}
+
+
+def test_session_store_reports_presence_from_loaded_state(temp_config_dir) -> None:
+    from holded_cli import session as session_module
+
+    session_file = Path(temp_config_dir) / "holded-cli" / "session.json"
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    session_file.write_text(
+        json.dumps({"cookies": {"hat": "secret"}, "saved_at": "2026-04-13T10:00:00Z"}),
+        encoding="utf-8",
+    )
+    session_module.SESSION_FILE = session_file
+
+    store = session_module.SessionStore()
+
+    assert store.is_present() is True
+    assert store.saved_at() == "2026-04-13T10:00:00Z"
+
+
+def test_config_get_state_rejects_non_app_state() -> None:
+    import click
+    import typer
+
+    from holded_cli.commands.config import _get_state
+
+    ctx = typer.Context(click.Command("config"))
+    ctx.obj = object()
+
+    with pytest.raises(RuntimeError, match="AppState is not available"):
+        _get_state(ctx)

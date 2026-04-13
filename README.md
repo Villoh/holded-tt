@@ -23,6 +23,12 @@ holded login
 # 2. Check your workplace ID
 holded workplaces
 
+# Optional: inspect your profile
+holded employee
+# aliases
+holded me
+holded whoami
+
 # 3. Save your defaults
 holded config set defaults.workplace_id <id>
 holded config set defaults.start 09:00
@@ -59,6 +65,19 @@ Lists all workplace IDs and names available in your account. Use the ID to confi
 
 ```bash
 holded workplaces
+```
+
+---
+
+### `holded employee`
+Shows your merged employee profile by combining the Holded employee and personal-info endpoints.
+
+Aliases: `holded me`, `holded whoami`
+
+```bash
+holded employee
+holded me
+holded whoami
 ```
 
 ---

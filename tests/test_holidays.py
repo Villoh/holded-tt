@@ -12,10 +12,18 @@ def test_extract_workplace_holidays_filters_by_type_and_status() -> None:
 
     summary = {
         "workplaceTimeOffs": [
-            {"assignationType": "workplace", "status": "accepted", "date": "2026-01-01"},
+            {
+                "assignationType": "workplace",
+                "status": "accepted",
+                "date": "2026-01-01",
+            },
             {"assignationType": "workplace", "status": "pending", "date": "2026-01-06"},
             {"assignationType": "personal", "status": "accepted", "date": "2026-01-12"},
-            {"assignationType": "workplace", "status": "accepted", "date": "2026-04-17"},
+            {
+                "assignationType": "workplace",
+                "status": "accepted",
+                "date": "2026-04-17",
+            },
         ]
     }
 
@@ -32,8 +40,16 @@ def test_extract_workplace_holidays_ignores_other_years() -> None:
 
     summary = {
         "workplaceTimeOffs": [
-            {"assignationType": "workplace", "status": "accepted", "date": "2025-12-25"},
-            {"assignationType": "workplace", "status": "accepted", "date": "2026-01-01"},
+            {
+                "assignationType": "workplace",
+                "status": "accepted",
+                "date": "2025-12-25",
+            },
+            {
+                "assignationType": "workplace",
+                "status": "accepted",
+                "date": "2026-01-01",
+            },
         ]
     }
 
@@ -86,7 +102,9 @@ def test_get_cached_holidays_skips_malformed_date_strings(tmp_path: Path) -> Non
 
     cache_file = tmp_path / "holidays.json"
     cache_file.write_text(
-        json.dumps({"year": 2026, "holidays": ["not-a-date", "2026-01-01", "also-bad"]}),
+        json.dumps(
+            {"year": 2026, "holidays": ["not-a-date", "2026-01-01", "also-bad"]}
+        ),
         encoding="utf-8",
     )
 
@@ -151,6 +169,22 @@ def test_extract_workplace_holidays_uses_first_date_key_found() -> None:
 
     assert date(2026, 5, 1) in holidays
     assert date(2026, 5, 2) not in holidays
+
+
+def test_extract_workplace_holidays_skips_invalid_date_values() -> None:
+    from holded_cli.holidays import extract_workplace_holidays
+
+    summary = {
+        "workplaceTimeOffs": [
+            {
+                "assignationType": "workplace",
+                "status": "accepted",
+                "date": "not-a-date",
+            }
+        ]
+    }
+
+    assert extract_workplace_holidays(summary, 2026) == frozenset()
 
 
 def test_current_year_paris_returns_plausible_year() -> None:

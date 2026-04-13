@@ -48,6 +48,8 @@ def test_root_help_is_available(runner) -> None:
     assert "login" in result.stdout
     assert "session" in result.stdout
     assert "workplaces" in result.stdout
+    assert "employee" in result.stdout
+    assert "personal-info" not in result.stdout
     assert "track" in result.stdout
     assert "config" in result.stdout
     assert "export" in result.stdout
@@ -102,6 +104,19 @@ def test_config_help_lists_show_and_set(runner) -> None:
     assert result.exit_code == 0
     assert "show" in result.stdout
     assert "set" in result.stdout
+
+
+def test_config_without_subcommand_defaults_to_show(
+    temp_config_dir, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_cli.cli")
+    _patch_runtime_files(temp_config_dir, monkeypatch)
+
+    result = runner.invoke(cli_module.app, ["config"])
+
+    assert result.exit_code == 0
+    assert "Configuration" in result.stdout
+    assert "workplace_id" in result.stdout
 
 
 def test_workplaces_without_session_shows_auth_error(

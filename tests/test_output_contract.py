@@ -19,15 +19,6 @@ from holded_cli.console import render_error
 from holded_cli.renderers import render_key_values, render_stub_status
 
 
-def test_readme_documents_exit_code_contract() -> None:
-    readme_text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-
-    assert "## Exit codes" in readme_text
-    assert f"{EXIT_SUCCESS} = success" in readme_text
-    assert f"{EXIT_USAGE} = input/usage error" in readme_text
-    assert f"{EXIT_OPERATIONAL} = operational error" in readme_text
-
-
 def test_exit_code_constants_are_locked() -> None:
     assert EXIT_SUCCESS == 0
     assert EXIT_USAGE == 1

@@ -134,7 +134,9 @@ def test_primary_login_normalizes_two_factor_requirement() -> None:
         result = client.primary_login("dweller@example.com", "s3cret")
 
     assert result.two_factor_required is True
-    assert result.masked_contact is None  # new flow: no token, server returns maskedContactMethod
+    assert (
+        result.masked_contact is None
+    )  # new flow: no token, server returns maskedContactMethod
 
 
 def test_primary_login_returns_masked_contact_when_present() -> None:
@@ -199,6 +201,26 @@ def test_confirm_two_factor_raises_on_http_error() -> None:
             client.confirm_two_factor("bad-code", "me@example.com")
 
     assert "401" in exc_info.value.message
+
+
+def test_confirm_two_factor_ignores_unreadable_success_payload() -> None:
+    from holded_cli.auth import HoldedAuthClient
+
+    exchanged: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/":
+            return httpx.Response(200, request=request)
+        if request.url.path == "/internal/auth/two-factor-confirm":
+            return httpx.Response(200, content=b"not-json", request=request)
+        exchanged.append(request.url.path)
+        return httpx.Response(200, request=request)
+
+    with HoldedAuthClient(transport=httpx.MockTransport(handler)) as client:
+        client.bootstrap()
+        client.confirm_two_factor("123456", "me@example.com")
+
+    assert exchanged == []
 
 
 def test_export_cookies_returns_all_jar_cookies() -> None:

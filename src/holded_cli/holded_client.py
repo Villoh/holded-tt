@@ -102,6 +102,18 @@ class HoldedClient:
                     return value
         return []
 
+    def get_employee(self) -> dict[str, Any]:
+        """Fetch the current employee record."""
+        response = self._get("/internal/teamzone/v2/employee")
+        data = self._parse_json(response)
+        return data if isinstance(data, dict) else {}
+
+    def get_personal_info(self) -> dict[str, Any]:
+        """Fetch the current employee personal info payload."""
+        response = self._get("/internal/teamzone/v2/personal-info")
+        data = self._parse_json(response)
+        return data if isinstance(data, dict) else {}
+
     def get_current_tracker(self) -> dict[str, Any] | None:
         """Return the active tracker, or None if there is none."""
         response = self._get("/internal/team/v2/current-tracker")
@@ -181,6 +193,7 @@ class HoldedClient:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             from holded_cli.holded_client import HoldedApiError
+
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
                 message=f"Validation failed (HTTP {exc.response.status_code}): {body}",
@@ -196,6 +209,7 @@ class HoldedClient:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             from holded_cli.holded_client import HoldedApiError
+
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
                 message=f"Submission failed (HTTP {exc.response.status_code}): {body}",

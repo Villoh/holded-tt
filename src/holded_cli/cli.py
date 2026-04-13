@@ -15,6 +15,7 @@ if hasattr(sys.stderr, "reconfigure"):
 from holded_cli import __version__
 from holded_cli.commands import (
     clock_app,
+    employee_command,
     export_command,
     login_command,
     session_command,
@@ -87,6 +88,12 @@ app.command(
     "workplaces",
     help="List available Holded workplace IDs and names.",
 )(_with_cli_error_handling(workplaces_command))
+app.command(
+    "employee",
+    help="Show the current Holded employee profile and personal info.",
+)(_with_cli_error_handling(employee_command))
+app.command("me", hidden=True)(_with_cli_error_handling(employee_command))
+app.command("whoami", hidden=True)(_with_cli_error_handling(employee_command))
 app.command(
     "track",
     help=(

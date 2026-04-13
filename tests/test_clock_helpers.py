@@ -14,8 +14,10 @@ import pytest
 # Pure-function tests: _elapsed
 # ---------------------------------------------------------------------------
 
+
 class _FakeDatetime(datetime):
     """Datetime subclass that returns a fixed 'now'."""
+
     _fixed_now: datetime
 
     @classmethod
@@ -75,6 +77,7 @@ def test_elapsed_naive_start_treated_as_utc(monkeypatch: pytest.MonkeyPatch) -> 
 # Pure-function tests: _local_hhmm
 # ---------------------------------------------------------------------------
 
+
 def test_local_hhmm_converts_to_paris_time() -> None:
     clock_module = importlib.import_module("holded_cli.commands.clock")
 
@@ -92,9 +95,88 @@ def test_local_hhmm_converts_to_utc() -> None:
     assert result == "17:00"
 
 
+def test_print_status_shows_running_paused_total(runner, monkeypatch) -> None:
+    Client = type(
+        "FakeClient",
+        (),
+        {
+            "__enter__": lambda self: self,
+            "__exit__": lambda self, *_: None,
+            "get_current_tracker": lambda self: {
+                **{
+                    "id": "t1",
+                    "start": "2026-04-13T08:00:00+00:00",
+                    "running": True,
+                    "paused": False,
+                },
+                "pausedTime": 600,
+            },
+        },
+    )
+    cli_module = importlib.import_module("holded_cli.cli")
+    clock_module = importlib.import_module("holded_cli.commands.clock")
+    monkeypatch.setattr(
+        cli_module,
+        "create_app_state",
+        lambda: type(
+            "State",
+            (),
+            {
+                "session_store": object(),
+                "config": type("Config", (), {"timezone": "UTC"})(),
+            },
+        )(),
+    )
+    monkeypatch.setattr(clock_module, "HoldedClient", lambda *_: Client())
+
+    result = runner.invoke(cli_module.app, ["clock", "status"])
+
+    assert result.exit_code == 0
+    assert "paused 10m" in result.stdout
+
+
+def test_print_status_shows_idle_tracker_state(runner, monkeypatch) -> None:
+    Client = type(
+        "FakeClient",
+        (),
+        {
+            "__enter__": lambda self: self,
+            "__exit__": lambda self, *_: None,
+            "get_current_tracker": lambda self: {
+                "id": "t1",
+                "start": "2026-04-13T08:00:00+00:00",
+                "running": False,
+                "paused": False,
+                "pausedTime": 0,
+            },
+        },
+    )
+    cli_module = importlib.import_module("holded_cli.cli")
+    clock_module = importlib.import_module("holded_cli.commands.clock")
+    monkeypatch.setattr(
+        cli_module,
+        "create_app_state",
+        lambda: type(
+            "State",
+            (),
+            {
+                "session_store": object(),
+                "config": type("Config", (), {"timezone": "UTC"})(),
+            },
+        )(),
+    )
+    monkeypatch.setattr(clock_module, "HoldedClient", lambda *_: Client())
+
+    result = runner.invoke(cli_module.app, ["clock", "status"])
+
+    assert result.exit_code == 0
+    assert "No active tracker" in result.stdout
+
+
 # ---------------------------------------------------------------------------
 # CLI surface tests
 # ---------------------------------------------------------------------------
+
 
 def test_clock_help_lists_subcommands(runner) -> None:
     cli_module = importlib.import_module("holded_cli.cli")

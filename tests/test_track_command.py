@@ -45,10 +45,12 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
 def _write_session(session_file: Path) -> None:
     session_file.parent.mkdir(parents=True, exist_ok=True)
     session_file.write_text(
-        json.dumps({
-            "cookies": {"hat": "tok", "PHPSESSID": "sid"},
-            "saved_at": "2026-04-10T08:00:00Z",
-        }),
+        json.dumps(
+            {
+                "cookies": {"hat": "tok", "PHPSESSID": "sid"},
+                "saved_at": "2026-04-10T08:00:00Z",
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -85,7 +87,9 @@ def test_track_rejects_inverted_date_range(tmp_path: Path, runner, monkeypatch) 
     assert "Traceback" not in result.stdout
 
 
-def test_track_dry_run_shows_table_for_week(tmp_path: Path, runner, monkeypatch) -> None:
+def test_track_dry_run_shows_table_for_week(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     # Cache an empty holiday set so no API call is needed
@@ -133,8 +137,10 @@ def test_track_dry_run_includes_weekends_when_flag_given(
         cli_module.app,
         [
             "track",
-            "--from", "2026-04-06",
-            "--to", "2026-04-12",
+            "--from",
+            "2026-04-06",
+            "--to",
+            "2026-04-12",
             "--include-weekends",
             "--dry-run",
         ],
@@ -194,9 +200,12 @@ def test_track_dry_run_shows_pauses_in_table(
         cli_module.app,
         [
             "track",
-            "--from", "2026-04-07",
-            "--to", "2026-04-07",
-            "--pause", "12:00-13:00",
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--pause",
+            "12:00-13:00",
             "--dry-run",
         ],
     )
@@ -215,9 +224,12 @@ def test_track_rejects_malformed_pause(tmp_path: Path, runner, monkeypatch) -> N
         cli_module.app,
         [
             "track",
-            "--from", "2026-04-07",
-            "--to", "2026-04-07",
-            "--pause", "12:00",  # malformed — no end time
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--pause",
+            "12:00",  # malformed — no end time
             "--dry-run",
         ],
     )
@@ -248,7 +260,10 @@ def test_track_without_session_shows_auth_error(
 # Submit path — mocked HoldedClient
 # ---------------------------------------------------------------------------
 
-def _fake_state_with_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+
+def _fake_state_with_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> SimpleNamespace:
     """Patch runtime files and return a fake AppState with real config + session store."""
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
@@ -273,10 +288,17 @@ def _patch_client(monkeypatch, cli_module, fake_state, *, calls: list):
     track_module = importlib.import_module("holded_cli.commands.track")
 
     class FakeClient:
-        def __enter__(self): return self
-        def __exit__(self, *_): pass
-        def check_bulk_timetracking(self, payload): calls.append(("check", payload))
-        def submit_bulk_timetracking(self, payload): calls.append(("submit", payload))
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def check_bulk_timetracking(self, payload):
+            calls.append(("check", payload))
+
+        def submit_bulk_timetracking(self, payload):
+            calls.append(("submit", payload))
 
     monkeypatch.setattr(cli_module, "create_app_state", lambda: fake_state)
     monkeypatch.setattr(track_module, "HoldedClient", lambda *_: FakeClient())
@@ -293,8 +315,16 @@ def test_validate_pause_rejects_reversed_times(
     # "13:00-12:00" — start >= end → BadParameter
     result = runner.invoke(
         cli_module.app,
-        ["track", "--from", "2026-04-07", "--to", "2026-04-07",
-         "--pause", "13:00-12:00", "--dry-run"],
+        [
+            "track",
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--pause",
+            "13:00-12:00",
+            "--dry-run",
+        ],
     )
 
     assert result.exit_code != 0
@@ -349,8 +379,16 @@ def test_track_dry_run_shows_workplace_in_context_line(
 
     result = runner.invoke(
         cli_module.app,
-        ["track", "--from", "2026-04-07", "--to", "2026-04-07",
-         "--workplace", "wp-123", "--dry-run"],
+        [
+            "track",
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--workplace",
+            "wp-123",
+            "--dry-run",
+        ],
     )
 
     assert result.exit_code == 0
@@ -376,10 +414,17 @@ def test_resolve_holidays_fetches_from_api_when_cache_missing(
         return frozenset()
 
     class FakeClient:
-        def __enter__(self): return self
-        def __exit__(self, *_): pass
-        def check_bulk_timetracking(self, payload): pass
-        def submit_bulk_timetracking(self, payload): pass
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def check_bulk_timetracking(self, payload):
+            pass
+
+        def submit_bulk_timetracking(self, payload):
+            pass
 
     state_module = importlib.import_module("holded_cli.state")
     config_module = importlib.import_module("holded_cli.config")
@@ -402,6 +447,46 @@ def test_resolve_holidays_fetches_from_api_when_cache_missing(
 
     assert result.exit_code == 0
     assert fetch_calls == [2026]
+
+
+def test_resolve_holidays_skips_live_fetch_on_dry_run_when_cache_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    paths = _patch_runtime_files(tmp_path, monkeypatch)
+    track_module = importlib.import_module("holded_cli.commands.track")
+
+    fake_state = SimpleNamespace(
+        session_store=object(),
+        config=SimpleNamespace(timezone="Europe/Madrid"),
+        holidays_file=paths["holidays_file"],
+    )
+
+    fetch_calls: list[int] = []
+
+    def fake_fetch_holidays(*_args, **_kwargs):
+        fetch_calls.append(2026)
+        return frozenset({date(2026, 4, 7)})
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+    monkeypatch.setattr(track_module, "fetch_holidays", fake_fetch_holidays)
+    monkeypatch.setattr(track_module, "HoldedClient", lambda *_: FakeClient())
+
+    result = track_module._resolve_holidays(
+        fake_state,
+        from_year=2026,
+        to_year=2026,
+        workplace_id="",
+        dry_run=True,
+    )
+
+    assert result == frozenset()
+    assert fetch_calls == []
 
 
 def test_track_submit_calls_check_and_submit(
@@ -448,9 +533,7 @@ def test_track_submit_large_range_prompts_confirmation(
     cli_module = importlib.import_module("holded_cli.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     # Override holiday cache to cover 2026 full range
-    _write_holiday_cache(
-        fake_state.holidays_file, 2026, []
-    )
+    _write_holiday_cache(fake_state.holidays_file, 2026, [])
     _patch_client(monkeypatch, cli_module, fake_state, calls=[])
 
     # 2026-04-06 to 2026-04-30 = 19 working days → triggers confirmation

@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import importlib
 import json
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from openpyxl import load_workbook
 
 
 # ---------------------------------------------------------------------------
 # Pure-function tests: _fmt_duration
 # ---------------------------------------------------------------------------
+
 
 def test_fmt_duration_zero_returns_empty() -> None:
     export_module = importlib.import_module("holded_cli.commands.export")
@@ -46,6 +49,7 @@ def test_fmt_duration_ignores_seconds() -> None:
 # Pure-function tests: _utc_to_local_hhmm
 # ---------------------------------------------------------------------------
 
+
 def test_utc_to_local_hhmm_converts_to_paris_time() -> None:
     export_module = importlib.import_module("holded_cli.commands.export")
 
@@ -60,9 +64,7 @@ def test_utc_to_local_hhmm_converts_to_paris_time() -> None:
 def test_utc_to_local_hhmm_converts_to_utc() -> None:
     export_module = importlib.import_module("holded_cli.commands.export")
 
-    result = export_module._utc_to_local_hhmm(
-        "2026-04-13T17:00:00+00:00", "UTC"
-    )
+    result = export_module._utc_to_local_hhmm("2026-04-13T17:00:00+00:00", "UTC")
 
     assert result == "17:00"
 
@@ -70,6 +72,7 @@ def test_utc_to_local_hhmm_converts_to_utc() -> None:
 # ---------------------------------------------------------------------------
 # CLI surface: input validation (no HTTP needed)
 # ---------------------------------------------------------------------------
+
 
 def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
     paths_module = importlib.import_module("holded_cli.paths")
@@ -99,10 +102,12 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
 def _write_session(session_file: Path) -> None:
     session_file.parent.mkdir(parents=True, exist_ok=True)
     session_file.write_text(
-        json.dumps({
-            "cookies": {"hat": "tok", "PHPSESSID": "sid"},
-            "saved_at": "2026-04-10T08:00:00Z",
-        }),
+        json.dumps(
+            {
+                "cookies": {"hat": "tok", "PHPSESSID": "sid"},
+                "saved_at": "2026-04-10T08:00:00Z",
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -124,9 +129,7 @@ def test_export_without_session_shows_auth_error(
     assert "holded login" in result.stderr
 
 
-def test_export_rejects_unknown_format(
-    tmp_path: Path, runner, monkeypatch
-) -> None:
+def test_export_rejects_unknown_format(tmp_path: Path, runner, monkeypatch) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     cli_module = importlib.import_module("holded_cli.cli")
@@ -160,6 +163,7 @@ def test_export_rejects_inverted_date_range(
 # ---------------------------------------------------------------------------
 # _build_xlsx — pure bytes generation (no HTTP)
 # ---------------------------------------------------------------------------
+
 
 def test_build_xlsx_generates_non_empty_bytes() -> None:
     export_module = importlib.import_module("holded_cli.commands.export")
@@ -238,9 +242,32 @@ def test_build_xlsx_with_holiday_entry() -> None:
     assert len(content) > 0
 
 
+def test_build_xlsx_uses_date_range_title_for_multi_month_exports() -> None:
+    export_module = importlib.import_module("holded_cli.commands.export")
+
+    content = export_module._build_xlsx(
+        data=[],
+        tz_name="UTC",
+        from_date=datetime(2026, 4, 30),
+        to_date=datetime(2026, 5, 1),
+        workplace_map={},
+        employee_name="Alice",
+        company_name="",
+    )
+
+    workbook = load_workbook(BytesIO(content))
+    worksheet = workbook.active
+
+    assert (
+        worksheet["A4"].value
+        == "Registros de control horario - 30/04/2026 - 01/05/2026"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Export CLI — mocked HoldedClient
 # ---------------------------------------------------------------------------
+
 
 def _fake_state() -> SimpleNamespace:
     config_module = importlib.import_module("holded_cli.config")
@@ -254,8 +281,11 @@ def _patch_export_client(monkeypatch, cli_module, fake_state, **client_methods):
     export_module = importlib.import_module("holded_cli.commands.export")
 
     class FakeClient:
-        def __enter__(self): return self
-        def __exit__(self, *_): pass
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
 
     for name, fn in client_methods.items():
         setattr(FakeClient, name, fn)
@@ -268,15 +298,26 @@ def test_export_pdf_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
     cli_module = importlib.import_module("holded_cli.cli")
     fake_pdf = b"%PDF-1.4 fake"
     _patch_export_client(
-        monkeypatch, cli_module, _fake_state(),
+        monkeypatch,
+        cli_module,
+        _fake_state(),
         get_timetracking_pdf=lambda self, *_: fake_pdf,
     )
     out_file = tmp_path / "report.pdf"
 
     result = runner.invoke(
         cli_module.app,
-        ["export", "--from", "2026-04-01", "--to", "2026-04-30",
-         "--format", "pdf", "--out", str(out_file)],
+        [
+            "export",
+            "--from",
+            "2026-04-01",
+            "--to",
+            "2026-04-30",
+            "--format",
+            "pdf",
+            "--out",
+            str(out_file),
+        ],
     )
 
     assert result.exit_code == 0
@@ -309,7 +350,9 @@ def test_export_xlsx_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
     fake_workplaces = [{"id": "wp-1", "name": "Oficina"}]
 
     _patch_export_client(
-        monkeypatch, cli_module, _fake_state(),
+        monkeypatch,
+        cli_module,
+        _fake_state(),
         get_timetracking_data=lambda self, *_: fake_data,
         get_workplaces=lambda self: fake_workplaces,
     )
@@ -317,8 +360,17 @@ def test_export_xlsx_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
 
     result = runner.invoke(
         cli_module.app,
-        ["export", "--from", "2026-04-07", "--to", "2026-04-07",
-         "--format", "xlsx", "--out", str(out_file)],
+        [
+            "export",
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--format",
+            "xlsx",
+            "--out",
+            str(out_file),
+        ],
     )
 
     assert result.exit_code == 0
