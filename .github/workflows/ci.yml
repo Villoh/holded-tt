@@ -72,42 +72,7 @@ jobs:
         run: uv sync --group dev --locked
 
       - name: Run tests
-        run: uv run python -m pytest --junitxml=pytest.xml
-
-      - name: Write test summary
-        if: always()
-        shell: bash
-        run: |
-          uv run python - <<'PY'
-          import os
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
-          report_path = Path("pytest.xml")
-
-          if not report_path.exists():
-              summary_path.open("a", encoding="utf-8").write(
-                  "## Test summary\n\n❌ No `pytest.xml` report was generated.\n"
-              )
-              raise SystemExit(0)
-
-          root = ET.parse(report_path).getroot()
-          attrs = root.attrib
-          tests = int(float(attrs.get("tests", 0)))
-          failures = int(float(attrs.get("failures", 0)))
-          errors = int(float(attrs.get("errors", 0)))
-          skipped = int(float(attrs.get("skipped", 0)))
-          passed = tests - failures - errors - skipped
-
-          with summary_path.open("a", encoding="utf-8") as fh:
-              fh.write("## Test summary\n\n")
-              fh.write(f"- ✅ Passed: **{passed}**\n")
-              fh.write(f"- ❌ Failed: **{failures}**\n")
-              fh.write(f"- 🚨 Errors: **{errors}**\n")
-              fh.write(f"- ⏭️ Skipped: **{skipped}**\n")
-              fh.write(f"- 🧪 Total: **{tests}**\n")
-          PY
+        run: uv run python -m pytest
 
   package:
     name: Package smoke test
@@ -165,21 +130,46 @@ jobs:
         run: uv sync --group dev --locked
 
       - name: Run tests with coverage
-        run: uv run python -m pytest --cov=holded_tt_cli --cov-report=term-missing --cov-report=markdown:coverage.md
+        run: uv run python -m pytest --junitxml=pytest.xml --cov=holded_tt_cli --cov-report=term-missing --cov-report=markdown:coverage.md
 
-      - name: Write coverage summary
+      - name: Write coverage and test summary
         if: always()
         shell: bash
         run: |
-          {
-            echo "## Coverage summary"
-            echo
-            if [ -f coverage.md ]; then
-              cat coverage.md
-            else
-              echo "❌ No coverage report was generated."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          uv run python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          report_path = Path("pytest.xml")
+          coverage_path = Path("coverage.md")
+
+          with summary_path.open("a", encoding="utf-8") as fh:
+              fh.write("## Test summary\n\n")
+              if report_path.exists():
+                  root = ET.parse(report_path).getroot()
+                  suites = [root] if root.tag == "testsuite" else root.findall(".//testsuite")
+                  tests = sum(int(float(suite.attrib.get("tests", 0))) for suite in suites)
+                  failures = sum(int(float(suite.attrib.get("failures", 0))) for suite in suites)
+                  errors = sum(int(float(suite.attrib.get("errors", 0))) for suite in suites)
+                  skipped = sum(int(float(suite.attrib.get("skipped", 0))) for suite in suites)
+                  passed = tests - failures - errors - skipped
+
+                  fh.write(f"- ✅ Passed: **{passed}**\n")
+                  fh.write(f"- ❌ Failed: **{failures}**\n")
+                  fh.write(f"- 🚨 Errors: **{errors}**\n")
+                  fh.write(f"- ⏭️ Skipped: **{skipped}**\n")
+                  fh.write(f"- 🧪 Total: **{tests}**\n")
+              else:
+                  fh.write("❌ No `pytest.xml` report was generated.\n")
+
+              fh.write("\n## Coverage summary\n\n")
+              if coverage_path.exists():
+                  fh.write(coverage_path.read_text(encoding="utf-8"))
+              else:
+                  fh.write("❌ No coverage report was generated.\n")
+          PY
 
   summary:
     name: Workflow summary
