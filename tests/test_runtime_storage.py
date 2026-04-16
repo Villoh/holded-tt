@@ -53,6 +53,7 @@ def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
         start="08:30",
         end="17:30",
         timezone="Europe/Paris",
+        pause=[],
     )
 
     updated = AppConfig(
@@ -60,6 +61,7 @@ def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
         start="09:00",
         end="18:00",
         timezone="Europe/Paris",
+        pause=["14:00-14:30"],
     )
     save_config(updated)
 

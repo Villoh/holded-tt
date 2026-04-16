@@ -6,6 +6,7 @@ from rich.table import Table
 from rich.text import Text
 
 from holded_tt_cli.config import save_config
+from holded_tt_cli.commands.track import _validate_pause
 from holded_tt_cli.console import get_output_console
 from holded_tt_cli.errors import InputError
 from holded_tt_cli.state import AppState
@@ -20,6 +21,7 @@ ALLOWED_CONFIG_KEYS = {
     "defaults.start": "start",
     "defaults.end": "end",
     "defaults.timezone": "timezone",
+    "defaults.pause": "pause",
 }
 
 
@@ -40,6 +42,14 @@ def _resolve_config_attr(key: str) -> str:
     return ALLOWED_CONFIG_KEYS[key]
 
 
+def _parse_config_value(key: str, value: str) -> str | list[str]:
+    if key != "defaults.pause":
+        return value
+
+    pauses = [item.strip() for item in value.split(",") if item.strip()]
+    return [_validate_pause(item) for item in pauses]
+
+
 @app.command("show")
 def show_command(ctx: typer.Context) -> None:
     """Show local config defaults and resolved storage paths."""
@@ -54,6 +64,7 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("start", state.config.start)
     grid.add_row("end", state.config.end)
     grid.add_row("timezone", state.config.timezone)
+    grid.add_row("pause", ", ".join(state.config.pause) or "[dim]—[/dim]")
     grid.add_row("", "")
     grid.add_row("[dim]config[/dim]", Text(str(state.config_file), style="dim"))
     grid.add_row("[dim]session[/dim]", Text(str(state.session_file), style="dim"))
@@ -76,7 +87,8 @@ def set_command(
             "  defaults.workplace_id   Default workplace for track\n\n"
             "  defaults.start          Work start time (HH:MM)\n\n"
             "  defaults.end            Work end time (HH:MM)\n\n"
-            "  defaults.timezone       Timezone (e.g. Europe/Madrid)"
+            "  defaults.timezone       Timezone (e.g. Europe/Madrid)\n\n"
+            "  defaults.pause          Default pauses (comma-separated HH:MM-HH:MM)"
         ),
     ),
     value: str = typer.Argument(..., help="New value to persist."),
@@ -90,17 +102,22 @@ def set_command(
       holded-tt config set defaults.start 09:00
 
       holded-tt config set defaults.timezone Europe/Madrid
+
+      holded-tt config set defaults.pause 14:00-14:30,17:00-17:15
     """
 
     state = _get_state(ctx)
     config_attr = _resolve_config_attr(key)
+    parsed_value = _parse_config_value(key, value)
 
-    setattr(state.config, config_attr, value)
+    setattr(state.config, config_attr, parsed_value)
     save_config(state.config)
+
+    rendered_value = ", ".join(parsed_value) if isinstance(parsed_value, list) else parsed_value
 
     line = Text()
     line.append("✓  ", style="green bold")
     line.append(key, style="dim")
     line.append(" → ", style="dim")
-    line.append(value, style="bold")
+    line.append(rendered_value or "—", style="bold")
     get_output_console().print(line)

@@ -151,6 +151,7 @@ def test_config_show_prints_defaults_and_local_paths(
     assert "08:30" in result.stdout
     assert "17:30" in result.stdout
     assert "Europe/Paris" in result.stdout
+    assert "pause" in result.stdout
     assert "config" in result.stdout
     assert "session" in result.stdout
     assert "holidays" in result.stdout
@@ -170,6 +171,22 @@ def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) 
     assert "defaults.workplace_id" in result.stdout
     assert "123" in result.stdout
     assert config_module.load_config().workplace_id == "123"
+
+
+def test_config_set_persists_pause_defaults(temp_config_dir, runner, monkeypatch) -> None:
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    config_module = importlib.import_module("holded_tt_cli.config")
+    _patch_runtime_files(temp_config_dir, monkeypatch)
+
+    result = runner.invoke(
+        cli_module.app,
+        ["config", "set", "defaults.pause", "14:00-14:30,17:00-17:15"],
+    )
+
+    assert result.exit_code == 0
+    assert "defaults.pause" in result.stdout
+    assert "14:00-14:30, 17:00-17:15" in result.stdout
+    assert config_module.load_config().pause == ["14:00-14:30", "17:00-17:15"]
 
 
 def test_config_set_rejects_unknown_keys_with_friendly_error(

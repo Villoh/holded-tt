@@ -559,11 +559,12 @@ def test_render_trackers_table_formats_local_times_and_skips_broken_rows(
 
     cells = [column._cells for column in table.columns]
     assert "06:30 -> 15:00" in cells[2]
-    assert "-" in cells[3]
-    assert "done" in cells[4]
-    assert "pending" in cells[5]
-    assert "clocking" in cells[6]
-    assert "yes" in cells[7]
+    assert "08:30" in cells[3]
+    assert "-" in cells[4]
+    assert "done" in cells[5]
+    assert "pending" in cells[6]
+    assert "clocking" in cells[7]
+    assert "yes" in cells[8]
 
 
 def test_resolve_track_days_can_skip_holiday_lookup() -> None:
@@ -790,6 +791,38 @@ def test_track_submit_calls_check_and_submit(
     )
 
 
+def test_track_submit_uses_configured_pause_defaults_when_flag_is_omitted(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    fake_state = _fake_state_with_files(tmp_path, monkeypatch)
+    fake_state.config.pause = ["14:00-14:30"]
+    calls: list = []
+    _patch_client(monkeypatch, cli_module, fake_state, calls=calls)
+
+    result = runner.invoke(
+        cli_module.app,
+        ["track", "--from", "2026-04-07", "--to", "2026-04-08"],
+    )
+
+    assert result.exit_code == 0
+    check_payload = next(p for op, p in calls if op == "check")
+    submit_payload = next(p for op, p in calls if op == "submit")
+    assert (
+        check_payload
+        == submit_payload
+        == {
+            "workplaceId": "",
+            "timezone": "Europe/Paris",
+            "days": ["2026-04-07", "2026-04-08"],
+            "start": "08:30",
+            "end": "17:30",
+            "pauses": [{"start": "14:00", "end": "14:30"}],
+        }
+    )
+
+
+
 def test_track_submit_builds_bulk_create_payload_with_pauses(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
@@ -832,6 +865,34 @@ def test_track_submit_builds_bulk_create_payload_with_pauses(
             "pauses": [{"start": "14:00", "end": "14:30"}],
         }
     )
+
+
+def test_track_submit_cli_pause_overrides_configured_pause_defaults(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+    fake_state = _fake_state_with_files(tmp_path, monkeypatch)
+    fake_state.config.pause = ["14:00-14:30"]
+    calls: list = []
+    _patch_client(monkeypatch, cli_module, fake_state, calls=calls)
+
+    result = runner.invoke(
+        cli_module.app,
+        [
+            "track",
+            "--from",
+            "2026-04-07",
+            "--to",
+            "2026-04-07",
+            "--pause",
+            "16:00-16:15",
+        ],
+    )
+
+    assert result.exit_code == 0
+    submit_payload = next(p for op, p in calls if op == "submit")
+    assert submit_payload["pauses"] == [{"start": "16:00", "end": "16:15"}]
+
 
 
 def test_track_show_lists_tracker_ids_for_date(
@@ -886,6 +947,7 @@ def test_track_show_lists_tracker_ids_for_date(
     assert "2026-04-07" in result.stdout
     assert "08:30" in result.stdout
     assert "14:00 -> 14:30" in result.stdout
+    assert "08:00" in result.stdout
     assert "pending" in result.stdout
     assert "clocking" in result.stdout
     assert "yes" in result.stdout

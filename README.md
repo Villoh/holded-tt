@@ -49,6 +49,7 @@ holded-tt config set defaults.workplace_id <id>
 holded-tt config set defaults.start 09:00
 holded-tt config set defaults.end 18:00
 holded-tt config set defaults.timezone Europe/Madrid
+holded-tt config set defaults.pause 14:00-15:00
 
 # 4. Register a date range (preview first)
 holded-tt track --from 2026-01-07 --to 2026-04-07 --dry-run
@@ -151,7 +152,7 @@ holded-tt track --from 2026-01-01 --to 2026-12-31 --yes
 Notes:
 
 - Use either `--today` or both `--from YYYY-MM-DD` and `--to YYYY-MM-DD`.
-- `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
+- `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`, `pause`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
 - `--dry-run` still uses `holidays.json` if that cache already exists.
@@ -186,7 +187,7 @@ holded-tt track update --date 2026-04-10 --tracker-id <tracker_id> \
 Notes for `track show` and `track update`:
 
 - `track show --date` uses Holded's single-day timetracking endpoint. `track show --from/--to` uses the range endpoint.
-- `track show` is intended to help you discover the `tracker.id` values returned by Holded and inspect the current `Time`, `Pauses`, `Status`, `Approved`, `Method`, and `Remote` fields.
+- `track show` is intended to help you discover the `tracker.id` values returned by Holded and inspect the current `Time`, `Worked`, `Pauses`, `Status`, `Approved`, `Method`, and `Remote` fields.
 - `track update` updates either a single tracker (`--date` + `--tracker-id`) or a date range (`--from/--to` or `--today`).
 - Single-tracker updates require both `--tracker-id` and either `--date` or `--today`.
 - Range updates filter weekends and workplace holidays by default, just like `holded-tt track`. Use `--include-weekends` and `--include-holidays` to opt in. These flags only affect range updates.
@@ -257,6 +258,7 @@ Actual built-in defaults used when `config.toml` is first created:
 - `defaults.start`: `08:30`
 - `defaults.end`: `17:30`
 - `defaults.timezone`: `Europe/Paris`
+- `defaults.pause`: empty list (`[]`)
 
 Examples below are sample values you may want to change, not the shipped defaults.
 
@@ -268,12 +270,14 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.start`         | Default work start time (HH:MM)    | `09:00`              |
 | `defaults.end`           | Default work end time (HH:MM)      | `18:00`              |
 | `defaults.timezone`      | Timezone for submitted entries     | `Europe/Madrid`      |
+| `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
 
 ```bash
 holded-tt config set defaults.workplace_id <workplace_id>
 holded-tt config set defaults.start 09:00
 holded-tt config set defaults.end 18:00
 holded-tt config set defaults.timezone Europe/Madrid
+holded-tt config set defaults.pause 14:00-14:30,17:00-17:15
 ```
 
 ---

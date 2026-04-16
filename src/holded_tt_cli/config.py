@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import tomllib
 
 import tomli_w
@@ -14,6 +14,7 @@ class AppConfig:
     start: str = "08:30"
     end: str = "17:30"
     timezone: str = "Europe/Paris"
+    pause: list[str] = field(default_factory=list)
 
 
 def load_config() -> AppConfig:
@@ -24,6 +25,13 @@ def load_config() -> AppConfig:
 
     with CONFIG_FILE.open("rb") as file:
         data = tomllib.load(file)
+
+    pause = data.get("pause", [])
+    data["pause"] = (
+        [item for item in pause if isinstance(item, str)]
+        if isinstance(pause, list)
+        else []
+    )
 
     return AppConfig(**data)
 

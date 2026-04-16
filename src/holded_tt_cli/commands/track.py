@@ -375,6 +375,7 @@ def _render_trackers_table(entries: list[dict[str, object]]) -> Table:
     table.add_column("Date", min_width=12)
     table.add_column("Tracker ID", min_width=16, overflow="fold")
     table.add_column("Time", min_width=13)
+    table.add_column("Worked", min_width=7)
     table.add_column("Pauses", min_width=16)
     table.add_column("Status", min_width=10)
     table.add_column("Approved", min_width=10)
@@ -391,7 +392,7 @@ def _render_trackers_table(entries: list[dict[str, object]]) -> Table:
             entry.get("trackers", []) if isinstance(entry.get("trackers"), list) else []
         )
         if not trackers:
-            table.add_row(str(day), "-", "-", "-", "empty", "-", "-", "-")
+            table.add_row(str(day), "-", "-", "-", "-", "empty", "-", "-", "-")
             continue
         for tracker in trackers:
             if not isinstance(tracker, dict):
@@ -423,6 +424,7 @@ def _render_trackers_table(entries: list[dict[str, object]]) -> Table:
                     + " -> "
                     + _format_tracker_time(tracker.get("end"), tz_name, day_obj)
                 ),
+                _format_duration(worked_time),
                 _format_pause_summary(pauses, tz_name, day_obj),
                 str(
                     tracker.get("status")
@@ -530,9 +532,11 @@ def track_command(
     effective_workplace = workplace or config.workplace_id
     effective_start = start or config.start
     effective_end = end or config.end
+    configured_pauses = config.pause if isinstance(config.pause, list) else []
 
     # --- Validate pauses ---
-    validated_pauses: list[str] = [_validate_pause(p) for p in (pause or [])]
+    raw_pauses = pause if pause is not None else configured_pauses
+    validated_pauses: list[str] = [_validate_pause(p) for p in raw_pauses]
 
     days = _resolve_track_days(
         state,
