@@ -26,6 +26,13 @@ class SessionStore:
             return self._state
 
         if not self.path.exists():
+            # Allow tests and other in-memory callers to pre-seed the store
+            # without requiring a backing file on disk.
+            cookies = self._state.get("cookies")
+            if isinstance(cookies, dict) and cookies:
+                self._loaded = True
+                return self._state
+
             self._state = EMPTY_SESSION.copy()
             self._loaded = True
             return self._state
