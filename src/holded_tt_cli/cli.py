@@ -23,7 +23,6 @@ from holded_tt_cli.commands import (
     track_app,
     workplaces_command,
 )
-from holded_tt_cli.commands.clock import CLOCK_HELP
 from holded_tt_cli.commands.config import CONFIG_HELP, set_command, show_command
 from holded_tt_cli.console import render_error
 from holded_tt_cli.errors import HoldedCliError

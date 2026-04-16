@@ -8,7 +8,7 @@ from rich.text import Text
 
 from holded_tt_cli.console import get_output_console
 from holded_tt_cli.errors import InputError
-from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+from holded_tt_cli.holded_client import HoldedClient
 from holded_tt_cli.state import AppState
 
 
