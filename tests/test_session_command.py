@@ -46,17 +46,20 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
 def test_session_reports_missing_when_no_session_file(
     tmp_path: Path, runner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    session_file = _patch_runtime_files(tmp_path, monkeypatch)
+    _patch_runtime_files(tmp_path, monkeypatch)
+    session_command_module = importlib.import_module("holded_tt_cli.commands.session")
+    monkeypatch.setattr(session_command_module, "validate_saved_session", lambda _: "missing")
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["session"])
 
     assert result.exit_code == 0
     assert "missing" in result.stdout
+    assert "live" in result.stdout
     assert "Traceback" not in result.stdout
 
 
-def test_session_reports_likely_valid_for_recent_session(
+def test_session_reports_active_for_live_valid_session(
     tmp_path: Path, runner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     session_file = _patch_runtime_files(tmp_path, monkeypatch)
@@ -65,12 +68,36 @@ def test_session_reports_likely_valid_for_recent_session(
         cookies={"hat": "token", "PHPSESSID": "abc"},
         saved_at="2026-04-10T12:00:00Z",
     )
+    session_command_module = importlib.import_module("holded_tt_cli.commands.session")
+    monkeypatch.setattr(session_command_module, "validate_saved_session", lambda _: "active")
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
-    result = runner.invoke(cli_module.app, ["session"])
+    result = runner.invoke(cli_module.app, ["session", "--live"])
+
+    assert result.exit_code == 0
+    assert "active" in result.stdout
+    assert "live" in result.stdout
+    assert "2026-04-10" in result.stdout
+
+
+def test_session_reports_likely_valid_in_offline_mode(
+    tmp_path: Path, runner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session_file = _patch_runtime_files(tmp_path, monkeypatch)
+    _write_session(
+        session_file,
+        cookies={"hat": "token", "PHPSESSID": "abc"},
+        saved_at="2026-04-10T12:00:00Z",
+    )
+    session_command_module = importlib.import_module("holded_tt_cli.commands.session")
+    monkeypatch.setattr(session_command_module, "describe_saved_session", lambda _: "likely valid")
+    cli_module = importlib.import_module("holded_tt_cli.cli")
+
+    result = runner.invoke(cli_module.app, ["session", "--offline"])
 
     assert result.exit_code == 0
     assert "likely valid" in result.stdout
+    assert "offline" in result.stdout
     assert "2026-04-10" in result.stdout
 
 
@@ -83,6 +110,8 @@ def test_session_shows_cookie_count(
         cookies={"hat": "tok", "PHPSESSID": "sid", "accountid": "aid"},
         saved_at="2026-04-10T08:00:00Z",
     )
+    session_command_module = importlib.import_module("holded_tt_cli.commands.session")
+    monkeypatch.setattr(session_command_module, "validate_saved_session", lambda _: "active")
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["session"])

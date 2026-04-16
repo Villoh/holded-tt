@@ -86,11 +86,15 @@ holded-tt login
 ---
 
 ### `holded-tt session`
-Shows the saved session status and when it was last refreshed.
+Shows the saved session status, validation mode, and when it was last refreshed. By default it validates the saved cookies live against Holded using `/internal/real-time/discover`.
 
 ```bash
 holded-tt session
+holded-tt session --live
+holded-tt session --offline
 ```
+
+`--live` checks the current session against Holded. `--offline` only inspects the locally saved cookies and timestamp.
 
 ---
 
@@ -284,9 +288,9 @@ holded-tt config set defaults.pause 14:00-14:30,17:00-17:15
 
 ## Session troubleshooting
 
-- Run `holded-tt session` to inspect whether a saved session exists and when it was last refreshed.
-- If commands report that no saved session is available, run `holded-tt login` again.
-- If commands report that the saved session is too old to trust, re-run `holded-tt login` to refresh it.
+- Run `holded-tt session` to inspect whether a saved session exists, whether live validation succeeds, and when it was last refreshed.
+- Use `holded-tt session --offline` if you only want to inspect the locally saved cookies and timestamp.
+- If commands report that no saved session is available or that the session is expired, run `holded-tt login` again.
 - If `holded-tt login` fails during 2FA, verify the code and try again.
 
 ## Development

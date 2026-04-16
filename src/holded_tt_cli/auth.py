@@ -11,6 +11,8 @@ from holded_tt_cli.errors import HoldedCliError
 
 HOLDED_BASE_URL = "https://app.holded.com"
 AUTH_FRESHNESS_DAYS = 30
+REAL_TIME_DISCOVER_PATH = "/internal/real-time/discover"
+_REQUIRED_DISCOVER_KEYS = frozenset({"topics", "token", "connectionToken", "wsUrl"})
 
 
 @dataclass(slots=True)
@@ -79,6 +81,60 @@ def require_saved_session(session_store, now: datetime | None = None) -> dict[st
         raise ExpiredAuthenticationError()
 
     return {str(key): str(value) for key, value in cookies.items()}
+
+
+def validate_saved_session(
+    session_store,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> str:
+    state = session_store.load()
+    cookies = state.get("cookies")
+    if not isinstance(cookies, dict) or not cookies:
+        return "missing"
+
+    client = httpx.Client(
+        base_url=HOLDED_BASE_URL,
+        cookies={str(key): str(value) for key, value in cookies.items()},
+        headers={
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+        },
+        follow_redirects=True,
+        timeout=10.0,
+        transport=transport,
+    )
+    try:
+        response = client.get(REAL_TIME_DISCOVER_PATH)
+    except httpx.HTTPError:
+        return "unknown"
+    finally:
+        client.close()
+
+    if response.status_code in (401, 403):
+        return "expired"
+
+    content_type = response.headers.get("content-type", "")
+    if response.status_code == 200 and "text/html" in content_type:
+        return "expired"
+
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError:
+        return "unknown"
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return "unknown"
+
+    if not isinstance(payload, dict):
+        return "unknown"
+
+    if _REQUIRED_DISCOVER_KEYS.issubset(payload):
+        return "active"
+
+    return "unknown"
 
 
 class HoldedAuthClient:

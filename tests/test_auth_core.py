@@ -113,6 +113,77 @@ def test_require_saved_session_returns_cookies_when_valid() -> None:
     assert result == {"hat": "token", "PHPSESSID": "abc"}
 
 
+def test_validate_saved_session_reports_missing_without_cookies() -> None:
+    from holded_tt_cli.auth import validate_saved_session
+
+    store = DummySessionStore(cookies={}, saved_at=None)
+
+    assert validate_saved_session(store) == "missing"
+
+
+def test_validate_saved_session_reports_active_when_discover_succeeds() -> None:
+    from holded_tt_cli.auth import validate_saved_session
+
+    seen_paths: list[str] = []
+    store = DummySessionStore(cookies={"hat": "token"}, saved_at=None)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        return httpx.Response(
+            200,
+            json={
+                "topics": [],
+                "token": "jwt",
+                "connectionToken": "conn",
+                "wsUrl": "wss://centrifugo.holded.com/connection/websocket",
+            },
+            request=request,
+        )
+
+    result = validate_saved_session(store, transport=httpx.MockTransport(handler))
+
+    assert result == "active"
+    assert seen_paths == ["/internal/real-time/discover"]
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        (lambda request: httpx.Response(401, request=request), "expired"),
+        (
+            lambda request: httpx.Response(
+                200,
+                content=b"<html><body>Login</body></html>",
+                headers={"content-type": "text/html; charset=utf-8"},
+                request=request,
+            ),
+            "expired",
+        ),
+        (
+            lambda request: httpx.Response(
+                200,
+                json={"topics": []},
+                request=request,
+            ),
+            "unknown",
+        ),
+    ],
+)
+def test_validate_saved_session_maps_discover_failures_to_status(
+    response, expected: str
+) -> None:
+    from holded_tt_cli.auth import validate_saved_session
+
+    store = DummySessionStore(cookies={"hat": "token"}, saved_at=None)
+
+    result = validate_saved_session(
+        store,
+        transport=httpx.MockTransport(response),
+    )
+
+    assert result == expected
+
+
 def test_primary_login_normalizes_two_factor_requirement() -> None:
     from holded_tt_cli.auth import HoldedAuthClient
 

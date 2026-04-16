@@ -5,7 +5,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt_cli.auth import describe_saved_session
+from holded_tt_cli.auth import describe_saved_session, validate_saved_session
 from holded_tt_cli.console import get_output_console
 from holded_tt_cli.state import AppState
 
@@ -15,13 +15,22 @@ REQUIRED_COOKIE_NAMES = frozenset(
 )
 
 _STATUS_STYLE = {
+    "active": ("green", "●"),
     "likely valid": ("green", "●"),
-    "unknown":      ("yellow", "●"),
-    "missing":      ("red", "○"),
+    "unknown": ("yellow", "●"),
+    "expired": ("red", "●"),
+    "missing": ("red", "○"),
 }
 
 
-def session_command(ctx: typer.Context) -> None:
+def session_command(
+    ctx: typer.Context,
+    live: bool = typer.Option(
+        True,
+        "--live/--offline",
+        help="Validate the saved session against Holded using /internal/real-time/discover.",
+    ),
+) -> None:
     """Show the saved Holded session status and timestamp."""
 
     state: AppState = ctx.obj
@@ -29,8 +38,13 @@ def session_command(ctx: typer.Context) -> None:
 
     session_data = session_store.load()
     cookies = session_data.get("cookies") or {}
-    status = describe_saved_session(session_store)
+    status = (
+        validate_saved_session(session_store)
+        if live
+        else describe_saved_session(session_store)
+    )
     saved_at = session_store.saved_at() or "—"
+    mode_text = Text("live" if live else "offline", style="cyan")
 
     color, dot = _STATUS_STYLE.get(status, ("dim", "○"))
 
@@ -47,9 +61,13 @@ def session_command(ctx: typer.Context) -> None:
 
     status_cell = Text()
     status_cell.append(f"{dot}  ", style=color)
-    status_cell.append(status, style=f"{color} bold" if status == "likely valid" else color)
+    status_cell.append(
+        status,
+        style=f"{color} bold" if status in {"active", "likely valid"} else color,
+    )
 
     grid.add_row("status", status_cell)
+    grid.add_row("mode", mode_text)
     grid.add_row("saved", Text(saved_at, style="dim"))
     grid.add_row("cookies", cookies_text)
 
