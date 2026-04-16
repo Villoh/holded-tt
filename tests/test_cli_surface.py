@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import importlib
-import pytest
+import re
 from pathlib import Path
+
+import pytest
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
 
 
 def _patch_runtime_files(base_dir: Path, monkeypatch) -> None:
@@ -42,20 +51,21 @@ def test_root_help_is_available(runner) -> None:
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["--help"])
+    output = _strip_ansi(result.stdout)
 
     assert result.exit_code == 0
-    assert "Holded time-tracking CLI." in result.stdout
-    assert "login" in result.stdout
-    assert "session" in result.stdout
-    assert "workplaces" in result.stdout
-    assert "employee" in result.stdout
-    assert "organization" in result.stdout
-    assert "personal-info" not in result.stdout
-    assert " whoami " not in result.stdout
-    assert "track" in result.stdout
-    assert "config" in result.stdout
-    assert "export" in result.stdout
-    assert "clock" in result.stdout
+    assert "Holded time-tracking CLI." in output
+    assert "login" in output
+    assert "session" in output
+    assert "workplaces" in output
+    assert "employee" in output
+    assert "organization" in output
+    assert "personal-info" not in output
+    assert " whoami " not in output
+    assert "track" in output
+    assert "config" in output
+    assert "export" in output
+    assert "clock" in output
 
 
 def test_root_callback_bootstraps_shared_state(
@@ -93,21 +103,23 @@ def test_track_help_includes_usage_example(runner) -> None:
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["track", "--help"])
+    output = _strip_ansi(result.stdout)
 
     assert result.exit_code == 0
-    assert "holded-tt track --from 2026-04-01 --to 2026-04-30" in result.stdout
-    assert "show" in result.stdout
-    assert "update" in result.stdout
+    assert "holded-tt track --from 2026-04-01 --to 2026-04-30" in output
+    assert "show" in output
+    assert "update" in output
 
 
 def test_config_help_lists_show_and_set(runner) -> None:
     cli_module = importlib.import_module("holded_tt_cli.cli")
 
     result = runner.invoke(cli_module.app, ["config", "--help"])
+    output = _strip_ansi(result.stdout)
 
     assert result.exit_code == 0
-    assert "show" in result.stdout
-    assert "set" in result.stdout
+    assert "show" in output
+    assert "set" in output
 
 
 def test_config_without_subcommand_defaults_to_show(
