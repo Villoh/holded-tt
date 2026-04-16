@@ -72,7 +72,42 @@ jobs:
         run: uv sync --group dev --locked
 
       - name: Run tests
-        run: uv run python -m pytest
+        run: uv run python -m pytest --junitxml=pytest.xml
+
+      - name: Write test summary
+        if: always()
+        shell: bash
+        run: |
+          uv run python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          report_path = Path("pytest.xml")
+
+          if not report_path.exists():
+              summary_path.open("a", encoding="utf-8").write(
+                  "## Test summary\n\n❌ No `pytest.xml` report was generated.\n"
+              )
+              raise SystemExit(0)
+
+          root = ET.parse(report_path).getroot()
+          attrs = root.attrib
+          tests = int(float(attrs.get("tests", 0)))
+          failures = int(float(attrs.get("failures", 0)))
+          errors = int(float(attrs.get("errors", 0)))
+          skipped = int(float(attrs.get("skipped", 0)))
+          passed = tests - failures - errors - skipped
+
+          with summary_path.open("a", encoding="utf-8") as fh:
+              fh.write("## Test summary\n\n")
+              fh.write(f"- ✅ Passed: **{passed}**\n")
+              fh.write(f"- ❌ Failed: **{failures}**\n")
+              fh.write(f"- 🚨 Errors: **{errors}**\n")
+              fh.write(f"- ⏭️ Skipped: **{skipped}**\n")
+              fh.write(f"- 🧪 Total: **{tests}**\n")
+          PY
 
   package:
     name: Package smoke test
@@ -130,10 +165,57 @@ jobs:
         run: uv sync --group dev --locked
 
       - name: Run tests with coverage
-        run: uv run python -m pytest --cov=holded_tt_cli --cov-report=term-missing --cov-report=xml
+        run: uv run python -m pytest --cov=holded_tt_cli --cov-report=term-missing --cov-report=markdown:coverage.md
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: coverage-xml
-          path: coverage.xml
+      - name: Write coverage summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Coverage summary"
+            echo
+            if [ -f coverage.md ]; then
+              cat coverage.md
+            else
+              echo "❌ No coverage report was generated."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  summary:
+    name: Workflow summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint
+      - test
+      - package
+      - coverage
+    steps:
+      - name: Write workflow summary
+        shell: bash
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+        run: |
+          status_icon() {
+            case "$1" in
+              success) echo "✅" ;;
+              failure) echo "❌" ;;
+              cancelled) echo "⚪" ;;
+              skipped) echo "⏭️" ;;
+              *) echo "❔" ;;
+            esac
+          }
+
+          {
+            echo "## CI summary"
+            echo
+            echo "| Job | Result |"
+            echo "| --- | --- |"
+            echo "| Lint | $(status_icon "$LINT_RESULT") $LINT_RESULT |"
+            echo "| Test matrix | $(status_icon "$TEST_RESULT") $TEST_RESULT |"
+            echo "| Package smoke test | $(status_icon "$PACKAGE_RESULT") $PACKAGE_RESULT |"
+            echo "| Coverage | $(status_icon "$COVERAGE_RESULT") $COVERAGE_RESULT |"
+          } >> "$GITHUB_STEP_SUMMARY"
