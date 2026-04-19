@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from holded_tt_cli.errors import HoldedCliError
+from holded_tt.errors import HoldedCliError
 
 
 HOLDED_BASE_URL = "https://app.holded.com"

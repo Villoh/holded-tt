@@ -13,10 +13,10 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 
-from holded_tt_cli.errors import ConfigError, HoldedCliError, InputError
-from holded_tt_cli.exit_codes import EXIT_OPERATIONAL, EXIT_SUCCESS, EXIT_USAGE
-from holded_tt_cli.console import render_error
-from holded_tt_cli.renderers import render_key_values, render_stub_status
+from holded_tt.errors import ConfigError, HoldedCliError, InputError
+from holded_tt.exit_codes import EXIT_OPERATIONAL, EXIT_SUCCESS, EXIT_USAGE
+from holded_tt.console import render_error
+from holded_tt.renderers import render_key_values, render_stub_status
 
 
 def test_exit_code_constants_are_locked() -> None:

@@ -10,7 +10,7 @@ import pytest
 
 
 def _session_store():
-    from holded_tt_cli.session import SessionStore
+    from holded_tt.session import SessionStore
 
     store = SessionStore()
     store._state = {"cookies": {"hat": "tok"}, "saved_at": "2026-04-10T08:00:00Z"}
@@ -18,7 +18,7 @@ def _session_store():
 
 
 def test_make_datetime_param_includes_utc_offset(monkeypatch) -> None:
-    import holded_tt_cli.holded_client as holded_client
+    import holded_tt.holded_client as holded_client
 
     monkeypatch.setattr(holded_client, "ZoneInfo", lambda _: timezone.utc)
 
@@ -29,7 +29,7 @@ def test_make_datetime_param_includes_utc_offset(monkeypatch) -> None:
 
 
 def test_make_datetime_param_applies_timezone_offset(monkeypatch) -> None:
-    import holded_tt_cli.holded_client as holded_client
+    import holded_tt.holded_client as holded_client
 
     monkeypatch.setattr(
         holded_client,
@@ -47,8 +47,8 @@ def test_make_datetime_param_applies_timezone_offset(monkeypatch) -> None:
 
 
 def test_check_auth_raises_on_401_response() -> None:
-    from holded_tt_cli.auth import MissingAuthenticationError
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.auth import MissingAuthenticationError
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, request=request)
@@ -62,8 +62,8 @@ def test_check_auth_raises_on_401_response() -> None:
 
 def test_check_auth_raises_on_html_response() -> None:
     """Holded returns HTTP 200 with an HTML login page on session expiry."""
-    from holded_tt_cli.auth import MissingAuthenticationError
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.auth import MissingAuthenticationError
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -81,7 +81,7 @@ def test_check_auth_raises_on_html_response() -> None:
 
 
 def test_parse_json_raises_on_invalid_json_body() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"not-json", request=request)
@@ -96,7 +96,7 @@ def test_parse_json_raises_on_invalid_json_body() -> None:
 
 
 def test_get_employee_requests_expected_endpoint() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     seen_paths: list[str] = []
 
@@ -116,7 +116,7 @@ def test_get_employee_requests_expected_endpoint() -> None:
 
 
 def test_get_personal_info_requests_expected_endpoint() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     seen_paths: list[str] = []
 
@@ -134,7 +134,7 @@ def test_get_personal_info_requests_expected_endpoint() -> None:
 
 
 def test_get_organization_employees_requests_expected_endpoint() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     seen_paths: list[str] = []
 
@@ -168,7 +168,7 @@ def test_get_organization_employees_requests_expected_endpoint() -> None:
 def test_get_organization_employees_supports_multiple_response_shapes(
     payload, expected
 ) -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=payload, request=request)
@@ -180,8 +180,8 @@ def test_get_organization_employees_supports_multiple_response_shapes(
 
 
 def test_get_timetracking_pdf_returns_response_bytes(monkeypatch) -> None:
-    import holded_tt_cli.holded_client as holded_client
-    from holded_tt_cli.holded_client import HoldedClient
+    import holded_tt.holded_client as holded_client
+    from holded_tt.holded_client import HoldedClient
 
     monkeypatch.setattr(holded_client, "_make_datetime_param", lambda *_: "stubbed")
 
@@ -208,7 +208,7 @@ def test_get_timetracking_pdf_returns_response_bytes(monkeypatch) -> None:
     ],
 )
 def test_get_workplaces_supports_multiple_response_shapes(payload, expected) -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=payload, request=request)
@@ -222,8 +222,8 @@ def test_get_workplaces_supports_multiple_response_shapes(payload, expected) -> 
 def test_get_timetracking_data_returns_empty_list_for_non_list_payload(
     monkeypatch,
 ) -> None:
-    import holded_tt_cli.holded_client as holded_client
-    from holded_tt_cli.holded_client import HoldedClient
+    import holded_tt.holded_client as holded_client
+    from holded_tt.holded_client import HoldedClient
 
     monkeypatch.setattr(holded_client, "_make_datetime_param", lambda *_: "stubbed")
 
@@ -240,8 +240,8 @@ def test_get_timetracking_data_returns_empty_list_for_non_list_payload(
 
 
 def test_get_day_timetracking_returns_dict_or_empty_dict(monkeypatch) -> None:
-    import holded_tt_cli.holded_client as holded_client
-    from holded_tt_cli.holded_client import HoldedClient
+    import holded_tt.holded_client as holded_client
+    from holded_tt.holded_client import HoldedClient
 
     monkeypatch.setattr(holded_client, "_make_datetime_param", lambda *_: "stubbed")
 
@@ -266,7 +266,7 @@ def test_get_day_timetracking_returns_dict_or_empty_dict(monkeypatch) -> None:
 
 
 def test_get_current_tracker_handles_missing_and_active_trackers() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     responses = iter(
         [
@@ -291,7 +291,7 @@ def test_get_current_tracker_handles_missing_and_active_trackers() -> None:
 
 
 def test_clock_in_raises_when_api_returns_non_string() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"id": "trk-1"}, request=request)
@@ -306,7 +306,7 @@ def test_clock_in_raises_when_api_returns_non_string() -> None:
 
 
 def test_clock_in_returns_tracker_id() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json="trk-1", request=request)
@@ -318,7 +318,7 @@ def test_clock_in_returns_tracker_id() -> None:
 
 
 def test_clock_out_treats_422_as_success() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(422, json={"errorCode": 4}, request=request)
@@ -330,7 +330,7 @@ def test_clock_out_treats_422_as_success() -> None:
 
 
 def test_clock_out_wraps_http_errors() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "boom"}, request=request)
@@ -345,7 +345,7 @@ def test_clock_out_wraps_http_errors() -> None:
 
 
 def test_pause_and_resume_tracker_return_api_payloads() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/pause"):
@@ -367,7 +367,7 @@ def test_pause_and_resume_tracker_return_api_payloads() -> None:
 
 
 def test_get_year_summary_returns_dict_or_empty_dict() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     responses = iter(
         [
@@ -387,8 +387,8 @@ def test_get_year_summary_returns_dict_or_empty_dict() -> None:
 
 
 def test_get_timetracking_pdf_wraps_http_errors(monkeypatch) -> None:
-    import holded_tt_cli.holded_client as holded_client
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    import holded_tt.holded_client as holded_client
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     monkeypatch.setattr(holded_client, "_make_datetime_param", lambda *_: "stubbed")
 
@@ -405,7 +405,7 @@ def test_get_timetracking_pdf_wraps_http_errors(monkeypatch) -> None:
 
 
 def test_bulk_timetracking_errors_include_response_body() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("check-bulk-timetracking-request"):
@@ -436,7 +436,7 @@ def test_bulk_timetracking_errors_include_response_body() -> None:
 
 
 def test_submit_bulk_timetracking_uses_create_endpoint() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     seen_requests: list[tuple[str, str, dict[str, object]]] = []
 
@@ -474,7 +474,7 @@ def test_submit_bulk_timetracking_uses_create_endpoint() -> None:
 
 
 def test_update_bulk_timetracking_uses_update_endpoint() -> None:
-    from holded_tt_cli.holded_client import HoldedClient
+    from holded_tt.holded_client import HoldedClient
 
     seen_requests: list[tuple[str, str, dict[str, object]]] = []
 
@@ -512,7 +512,7 @@ def test_update_bulk_timetracking_uses_update_endpoint() -> None:
 
 
 def test_request_wraps_transport_errors() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)
@@ -527,7 +527,7 @@ def test_request_wraps_transport_errors() -> None:
 
 
 def test_parse_json_wraps_http_status_errors() -> None:
-    from holded_tt_cli.holded_client import HoldedApiError, HoldedClient
+    from holded_tt.holded_client import HoldedApiError, HoldedClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "boom"}, request=request)

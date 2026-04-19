@@ -19,27 +19,27 @@ from openpyxl import load_workbook
 
 
 def test_fmt_duration_zero_returns_empty() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     assert export_module._fmt_duration(0) == ""
 
 
 def test_fmt_duration_minutes_only() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     # 30 minutes = 1800 seconds → "00h 30m"
     assert export_module._fmt_duration(1800) == "00h 30m"
 
 
 def test_fmt_duration_hours_and_minutes() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     # 8 hours 30 minutes = 30600 seconds
     assert export_module._fmt_duration(30600) == "08h 30m"
 
 
 def test_fmt_duration_ignores_seconds() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     # 3661 seconds = 1h 1m 1s → seconds are truncated
     assert export_module._fmt_duration(3661) == "01h 01m"
@@ -48,7 +48,7 @@ def test_fmt_duration_ignores_seconds() -> None:
 def test_default_export_path_uses_base_filename_when_unused(
     tmp_path: Path, monkeypatch
 ) -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     monkeypatch.chdir(tmp_path)
 
@@ -64,7 +64,7 @@ def test_default_export_path_uses_base_filename_when_unused(
 def test_default_export_path_uses_incremental_suffix_when_file_exists(
     tmp_path: Path, monkeypatch
 ) -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / "holded-tt-2026-04-01_2026-04-30.pdf").write_bytes(b"first")
@@ -85,7 +85,7 @@ def test_default_export_path_uses_incremental_suffix_when_file_exists(
 
 
 def test_utc_to_local_hhmm_converts_to_paris_time() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     # 2026-04-13T08:30:00+00:00 → Europe/Paris in summer is UTC+2 → 10:30
     result = export_module._utc_to_local_hhmm(
@@ -96,7 +96,7 @@ def test_utc_to_local_hhmm_converts_to_paris_time() -> None:
 
 
 def test_utc_to_local_hhmm_converts_to_utc() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     result = export_module._utc_to_local_hhmm("2026-04-13T17:00:00+00:00", "UTC")
 
@@ -109,10 +109,10 @@ def test_utc_to_local_hhmm_converts_to_utc() -> None:
 
 
 def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
-    paths_module = importlib.import_module("holded_tt_cli.paths")
-    session_module = importlib.import_module("holded_tt_cli.session")
-    state_module = importlib.import_module("holded_tt_cli.state")
-    config_module = importlib.import_module("holded_tt_cli.config")
+    paths_module = importlib.import_module("holded_tt.paths")
+    session_module = importlib.import_module("holded_tt.session")
+    state_module = importlib.import_module("holded_tt.state")
+    config_module = importlib.import_module("holded_tt.config")
 
     config_dir = base_dir / "holded-tt-cli"
     config_file = config_dir / "config.toml"
@@ -151,7 +151,7 @@ def test_export_without_session_shows_auth_error(
 ) -> None:
     _patch_runtime_files(tmp_path, monkeypatch)
     # No session file written
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -166,7 +166,7 @@ def test_export_without_session_shows_auth_error(
 def test_export_rejects_unknown_format(tmp_path: Path, runner, monkeypatch) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -183,7 +183,7 @@ def test_export_rejects_inverted_date_range(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -200,7 +200,7 @@ def test_export_rejects_inverted_date_range(
 
 
 def test_build_xlsx_generates_non_empty_bytes() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     data = [
         {
@@ -251,7 +251,7 @@ def test_build_xlsx_generates_non_empty_bytes() -> None:
 
 
 def test_build_xlsx_with_holiday_entry() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     data = [
         {
@@ -277,7 +277,7 @@ def test_build_xlsx_with_holiday_entry() -> None:
 
 
 def test_build_xlsx_uses_date_range_title_for_multi_month_exports() -> None:
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     content = export_module._build_xlsx(
         data=[],
@@ -304,7 +304,7 @@ def test_build_xlsx_uses_date_range_title_for_multi_month_exports() -> None:
 
 
 def _fake_state() -> SimpleNamespace:
-    config_module = importlib.import_module("holded_tt_cli.config")
+    config_module = importlib.import_module("holded_tt.config")
     return SimpleNamespace(
         session_store=object(),
         config=config_module.load_config(),
@@ -312,7 +312,7 @@ def _fake_state() -> SimpleNamespace:
 
 
 def _patch_export_client(monkeypatch, cli_module, fake_state, **client_methods):
-    export_module = importlib.import_module("holded_tt_cli.commands.export")
+    export_module = importlib.import_module("holded_tt.commands.export")
 
     class FakeClient:
         def __enter__(self):
@@ -329,7 +329,7 @@ def _patch_export_client(monkeypatch, cli_module, fake_state, **client_methods):
 
 
 def test_export_pdf_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_pdf = b"%PDF-1.4 fake"
     _patch_export_client(
         monkeypatch,
@@ -360,7 +360,7 @@ def test_export_pdf_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
 
 
 def test_export_xlsx_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     fake_data = [
         {
@@ -415,7 +415,7 @@ def test_export_xlsx_writes_file(tmp_path: Path, runner, monkeypatch) -> None:
 def test_export_pdf_without_out_uses_unsuffixed_default_filename(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_pdf = b"%PDF-1.4 fake"
 
     _patch_export_client(
@@ -449,7 +449,7 @@ def test_export_pdf_without_out_uses_unsuffixed_default_filename(
 def test_export_pdf_without_out_uses_incremental_suffix_when_needed(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_pdf = b"%PDF-1.4 fake"
 
     _patch_export_client(

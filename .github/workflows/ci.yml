@@ -131,7 +131,7 @@ jobs:
         run: uv sync --group dev --locked
 
       - name: Run tests with coverage
-        run: uv run python -m pytest --junitxml=pytest.xml --cov=holded_tt_cli --cov-report=term-missing --cov-report=markdown:coverage.md
+        run: uv run python -m pytest --junitxml=pytest.xml --cov=holded_tt --cov-report=term-missing --cov-report=markdown:coverage.md
 
       - name: Write coverage and test summary
         if: always()

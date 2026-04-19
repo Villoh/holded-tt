@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from holded_tt_cli.exit_codes import EXIT_OPERATIONAL, EXIT_USAGE
+from holded_tt.exit_codes import EXIT_OPERATIONAL, EXIT_USAGE
 
 
 class HoldedCliError(Exception):

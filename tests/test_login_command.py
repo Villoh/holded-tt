@@ -4,7 +4,7 @@ import importlib
 from dataclasses import dataclass
 from types import SimpleNamespace
 
-from holded_tt_cli.errors import HoldedCliError
+from holded_tt.errors import HoldedCliError
 
 
 @dataclass
@@ -23,8 +23,8 @@ class FakeSessionStore:
 
 
 def test_login_prompts_for_two_factor_only_when_required(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    login_module = importlib.import_module("holded_tt_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt.cli")
+    login_module = importlib.import_module("holded_tt.commands.login")
 
     session_store = FakeSessionStore()
     state = SimpleNamespace(session_store=session_store)
@@ -79,8 +79,8 @@ def test_login_prompts_for_two_factor_only_when_required(runner, monkeypatch) ->
 
 
 def test_login_skips_two_factor_prompt_when_not_required(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    login_module = importlib.import_module("holded_tt_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt.cli")
+    login_module = importlib.import_module("holded_tt.commands.login")
 
     session_store = FakeSessionStore()
     state = SimpleNamespace(session_store=session_store)
@@ -120,8 +120,8 @@ def test_login_skips_two_factor_prompt_when_not_required(runner, monkeypatch) ->
 
 
 def test_login_surfaces_auth_failures_without_traceback(runner, monkeypatch) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    login_module = importlib.import_module("holded_tt_cli.commands.login")
+    cli_module = importlib.import_module("holded_tt.cli")
+    login_module = importlib.import_module("holded_tt.commands.login")
 
     state = SimpleNamespace(session_store=FakeSessionStore())
 

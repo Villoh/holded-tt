@@ -13,13 +13,13 @@ def runtime_paths_module(temp_config_dir):
     import sys
 
     for module_name in [
-        "holded_tt_cli.paths",
-        "holded_tt_cli.config",
-        "holded_tt_cli.session",
+        "holded_tt.paths",
+        "holded_tt.config",
+        "holded_tt.session",
     ]:
         sys.modules.pop(module_name, None)
 
-    return importlib.import_module("holded_tt_cli.paths")
+    return importlib.import_module("holded_tt.paths")
 
 
 def test_runtime_paths_use_fixed_files_and_create_config_dir(
@@ -37,7 +37,7 @@ def test_runtime_paths_use_fixed_files_and_create_config_dir(
 
 
 def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
-    from holded_tt_cli import config as config_module
+    from holded_tt import config as config_module
 
     config_file = Path(temp_config_dir) / "holded-tt-cli" / "config.toml"
     config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -71,7 +71,7 @@ def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:
 def test_session_store_persists_cookies_and_saved_at(
     temp_config_dir, monkeypatch
 ) -> None:
-    from holded_tt_cli import session as session_module
+    from holded_tt import session as session_module
 
     chmod_calls: list[tuple[object, int]] = []
 
@@ -100,7 +100,7 @@ def test_session_store_persists_cookies_and_saved_at(
 
 
 def test_session_store_loads_missing_files_as_empty_state(temp_config_dir) -> None:
-    from holded_tt_cli import session as session_module
+    from holded_tt import session as session_module
 
     session_file = Path(temp_config_dir) / "holded-tt-cli" / "session.json"
     session_file.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ def test_session_store_loads_missing_files_as_empty_state(temp_config_dir) -> No
 
 
 def test_session_store_reports_presence_from_loaded_state(temp_config_dir) -> None:
-    from holded_tt_cli import session as session_module
+    from holded_tt import session as session_module
 
     session_file = Path(temp_config_dir) / "holded-tt-cli" / "session.json"
     session_file.parent.mkdir(parents=True, exist_ok=True)
@@ -134,7 +134,7 @@ def test_config_get_state_rejects_non_app_state() -> None:
     import click
     import typer
 
-    from holded_tt_cli.commands.config import _get_state
+    from holded_tt.commands.config import _get_state
 
     ctx = typer.Context(click.Command("config"))
     ctx.obj = object()

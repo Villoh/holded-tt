@@ -8,11 +8,11 @@ from zoneinfo import ZoneInfo
 import typer
 from rich.text import Text
 
-from holded_tt_cli.console import get_output_console
-from holded_tt_cli.dates import parse_date
-from holded_tt_cli.errors import InputError
-from holded_tt_cli.holded_client import HoldedClient
-from holded_tt_cli.state import AppState
+from holded_tt.console import get_output_console
+from holded_tt.dates import parse_date
+from holded_tt.errors import InputError
+from holded_tt.holded_client import HoldedClient
+from holded_tt.state import AppState
 
 
 _ES_MONTHS = {

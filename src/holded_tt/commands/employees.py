@@ -4,9 +4,9 @@ import typer
 from rich import box as rich_box
 from rich.table import Table
 
-from holded_tt_cli.console import get_output_console
-from holded_tt_cli.holded_client import HoldedClient
-from holded_tt_cli.state import AppState
+from holded_tt.console import get_output_console
+from holded_tt.holded_client import HoldedClient
+from holded_tt.state import AppState
 
 
 def _string_value(value: object, default: str = "-") -> str:

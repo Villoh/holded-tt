@@ -20,19 +20,19 @@ def temp_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("APPDATA", str(config_dir))
 
     for module_name in [
-        "holded_tt_cli",
-        "holded_tt_cli.cli",
-        "holded_tt_cli.paths",
-        "holded_tt_cli.config",
-        "holded_tt_cli.state",
-        "holded_tt_cli.session",
-        "holded_tt_cli.commands",
-        "holded_tt_cli.commands.config",
-        "holded_tt_cli.commands.employee",
-        "holded_tt_cli.commands.login",
-        "holded_tt_cli.commands.session",
-        "holded_tt_cli.commands.track",
-        "holded_tt_cli.commands.workplaces",
+        "holded_tt",
+        "holded_tt.cli",
+        "holded_tt.paths",
+        "holded_tt.config",
+        "holded_tt.state",
+        "holded_tt.session",
+        "holded_tt.commands",
+        "holded_tt.commands.config",
+        "holded_tt.commands.employee",
+        "holded_tt.commands.login",
+        "holded_tt.commands.session",
+        "holded_tt.commands.track",
+        "holded_tt.commands.workplaces",
     ]:
         sys.modules.pop(module_name, None)
 

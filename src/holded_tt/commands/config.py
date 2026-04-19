@@ -5,11 +5,11 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt_cli.config import save_config
-from holded_tt_cli.commands.track import _validate_pause
-from holded_tt_cli.console import get_output_console
-from holded_tt_cli.errors import InputError
-from holded_tt_cli.state import AppState
+from holded_tt.config import save_config
+from holded_tt.commands.track import _validate_pause
+from holded_tt.console import get_output_console
+from holded_tt.errors import InputError
+from holded_tt.state import AppState
 
 
 CONFIG_HELP = "Inspect or update local Holded TT CL defaults."

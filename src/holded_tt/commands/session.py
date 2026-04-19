@@ -5,9 +5,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt_cli.auth import describe_saved_session, validate_saved_session
-from holded_tt_cli.console import get_output_console
-from holded_tt_cli.state import AppState
+from holded_tt.auth import describe_saved_session, validate_saved_session
+from holded_tt.console import get_output_console
+from holded_tt.state import AppState
 
 
 REQUIRED_COOKIE_NAMES = frozenset(

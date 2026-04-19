@@ -26,7 +26,7 @@ class _FakeDatetime(datetime):
 
 
 def _patch_clock_datetime(monkeypatch: pytest.MonkeyPatch, fixed_now: datetime) -> None:
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
     _FakeDatetime._fixed_now = fixed_now
     monkeypatch.setattr(clock_module, "datetime", _FakeDatetime)
 
@@ -34,7 +34,7 @@ def _patch_clock_datetime(monkeypatch: pytest.MonkeyPatch, fixed_now: datetime) 
 def test_elapsed_seconds_only(monkeypatch: pytest.MonkeyPatch) -> None:
     fixed_now = datetime(2026, 4, 13, 10, 0, 45, tzinfo=timezone.utc)
     _patch_clock_datetime(monkeypatch, fixed_now)
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     result = clock_module._elapsed("2026-04-13T10:00:00+00:00")
 
@@ -44,7 +44,7 @@ def test_elapsed_seconds_only(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_elapsed_minutes_and_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
     fixed_now = datetime(2026, 4, 13, 10, 3, 20, tzinfo=timezone.utc)
     _patch_clock_datetime(monkeypatch, fixed_now)
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     result = clock_module._elapsed("2026-04-13T10:00:00+00:00")
 
@@ -54,7 +54,7 @@ def test_elapsed_minutes_and_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_elapsed_hours_and_minutes(monkeypatch: pytest.MonkeyPatch) -> None:
     fixed_now = datetime(2026, 4, 13, 11, 30, 0, tzinfo=timezone.utc)
     _patch_clock_datetime(monkeypatch, fixed_now)
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     # 1h 30m elapsed — seconds are not shown when hours > 0
     result = clock_module._elapsed("2026-04-13T10:00:00+00:00")
@@ -65,7 +65,7 @@ def test_elapsed_hours_and_minutes(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_elapsed_naive_start_treated_as_utc(monkeypatch: pytest.MonkeyPatch) -> None:
     fixed_now = datetime(2026, 4, 13, 10, 0, 10, tzinfo=timezone.utc)
     _patch_clock_datetime(monkeypatch, fixed_now)
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     # Holded sometimes returns naive timestamps — should be treated as UTC
     result = clock_module._elapsed("2026-04-13T10:00:00")
@@ -79,7 +79,7 @@ def test_elapsed_naive_start_treated_as_utc(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_local_hhmm_converts_to_paris_time() -> None:
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     # UTC 08:30 in summer Paris time (UTC+2) = 10:30
     result = clock_module._local_hhmm("2026-04-13T08:30:00+00:00", "Europe/Paris")
@@ -88,7 +88,7 @@ def test_local_hhmm_converts_to_paris_time() -> None:
 
 
 def test_local_hhmm_converts_to_utc() -> None:
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
 
     result = clock_module._local_hhmm("2026-04-13T17:00:00+00:00", "UTC")
 
@@ -113,8 +113,8 @@ def test_print_status_shows_running_paused_total(runner, monkeypatch) -> None:
             },
         },
     )
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    cli_module = importlib.import_module("holded_tt.cli")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
     monkeypatch.setattr(
         cli_module,
         "create_app_state",
@@ -151,8 +151,8 @@ def test_print_status_shows_idle_tracker_state(runner, monkeypatch) -> None:
             },
         },
     )
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    cli_module = importlib.import_module("holded_tt.cli")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
     monkeypatch.setattr(
         cli_module,
         "create_app_state",
@@ -179,7 +179,7 @@ def test_print_status_shows_idle_tracker_state(runner, monkeypatch) -> None:
 
 
 def test_clock_help_lists_subcommands(runner) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(cli_module.app, ["clock", "--help"])
 
@@ -197,11 +197,11 @@ def test_clock_without_session_raises_auth_error(
     """clock sub-commands are not wrapped with _with_cli_error_handling, so
     MissingAuthenticationError propagates as an unhandled exception (exit 1,
     captured in result.exception)."""
-    paths_module = importlib.import_module("holded_tt_cli.paths")
-    session_module = importlib.import_module("holded_tt_cli.session")
-    state_module = importlib.import_module("holded_tt_cli.state")
-    config_module = importlib.import_module("holded_tt_cli.config")
-    auth_module = importlib.import_module("holded_tt_cli.auth")
+    paths_module = importlib.import_module("holded_tt.paths")
+    session_module = importlib.import_module("holded_tt.session")
+    state_module = importlib.import_module("holded_tt.state")
+    config_module = importlib.import_module("holded_tt.config")
+    auth_module = importlib.import_module("holded_tt.auth")
 
     config_dir = tmp_path / "holded-tt-cli"
     session_file = config_dir / "session.json"
@@ -217,7 +217,7 @@ def test_clock_without_session_raises_auth_error(
     monkeypatch.setattr(state_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(state_module, "HOLIDAYS_FILE", config_dir / "holidays.json")
 
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     # `clock in` calls HoldedClient which requires a session
     result = runner.invoke(cli_module.app, ["clock", "in"])

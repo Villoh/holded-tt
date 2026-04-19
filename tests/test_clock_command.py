@@ -56,8 +56,8 @@ def _make_client_class(**methods):
 
 
 def _patch(monkeypatch, fake_state, FakeClient):
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    clock_module = importlib.import_module("holded_tt_cli.commands.clock")
+    cli_module = importlib.import_module("holded_tt.cli")
+    clock_module = importlib.import_module("holded_tt.commands.clock")
     monkeypatch.setattr(cli_module, "create_app_state", lambda: fake_state)
     monkeypatch.setattr(clock_module, "HoldedClient", lambda *_: FakeClient())
     return cli_module
@@ -125,7 +125,7 @@ def test_clock_in_success(runner, monkeypatch) -> None:
 
 
 def test_clock_in_fails_when_tracker_already_running(runner, monkeypatch) -> None:
-    errors_module = importlib.import_module("holded_tt_cli.errors")
+    errors_module = importlib.import_module("holded_tt.errors")
     Client = _make_client_class(
         get_current_tracker=lambda self: _RUNNING_TRACKER,
     )
@@ -155,7 +155,7 @@ def test_clock_out_success(runner, monkeypatch) -> None:
 
 
 def test_clock_out_fails_when_no_active_tracker(runner, monkeypatch) -> None:
-    errors_module = importlib.import_module("holded_tt_cli.errors")
+    errors_module = importlib.import_module("holded_tt.errors")
     Client = _make_client_class()  # get_current_tracker returns None
     cli = _patch(monkeypatch, _fake_state(), Client)
 
@@ -183,7 +183,7 @@ def test_clock_pause_success(runner, monkeypatch) -> None:
 
 
 def test_clock_pause_fails_when_already_paused(runner, monkeypatch) -> None:
-    errors_module = importlib.import_module("holded_tt_cli.errors")
+    errors_module = importlib.import_module("holded_tt.errors")
     Client = _make_client_class(
         get_current_tracker=lambda self: _PAUSED_TRACKER,
     )
@@ -214,7 +214,7 @@ def test_clock_resume_success(runner, monkeypatch) -> None:
 
 
 def test_clock_resume_fails_when_not_paused(runner, monkeypatch) -> None:
-    errors_module = importlib.import_module("holded_tt_cli.errors")
+    errors_module = importlib.import_module("holded_tt.errors")
     Client = _make_client_class(
         get_current_tracker=lambda self: _RUNNING_TRACKER,
     )

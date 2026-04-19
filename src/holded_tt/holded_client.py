@@ -8,9 +8,9 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-from holded_tt_cli.auth import MissingAuthenticationError, require_saved_session
-from holded_tt_cli.errors import HoldedCliError
-from holded_tt_cli.session import SessionStore
+from holded_tt.auth import MissingAuthenticationError, require_saved_session
+from holded_tt.errors import HoldedCliError
+from holded_tt.session import SessionStore
 
 
 HOLDED_BASE_URL = "https://app.holded.com"
@@ -220,7 +220,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_tt_cli.holded_client import HoldedApiError
+            from holded_tt.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
@@ -236,7 +236,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_tt_cli.holded_client import HoldedApiError
+            from holded_tt.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(
@@ -250,7 +250,7 @@ class HoldedClient:
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            from holded_tt_cli.holded_client import HoldedApiError
+            from holded_tt.holded_client import HoldedApiError
 
             body = exc.response.text[:300].strip()
             raise HoldedApiError(

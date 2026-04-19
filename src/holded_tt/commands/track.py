@@ -10,12 +10,12 @@ from rich import box as rich_box
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt_cli.console import get_output_console, render_error
-from holded_tt_cli.dates import date_range, filter_holidays, filter_weekends, parse_date
-from holded_tt_cli.errors import HoldedCliError, InputError
-from holded_tt_cli.holded_client import HoldedClient
-from holded_tt_cli.holidays import fetch_holidays, get_cached_holidays
-from holded_tt_cli.state import AppState
+from holded_tt.console import get_output_console, render_error
+from holded_tt.dates import date_range, filter_holidays, filter_weekends, parse_date
+from holded_tt.errors import HoldedCliError, InputError
+from holded_tt.holded_client import HoldedClient
+from holded_tt.holidays import fetch_holidays, get_cached_holidays
+from holded_tt.state import AppState
 
 
 TRACK_HELP = """Register working days in a date range on Holded.

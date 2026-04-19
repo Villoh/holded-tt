@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from holded_tt_cli.holded_client import HoldedClient
+from holded_tt.holded_client import HoldedClient
 
 
 try:

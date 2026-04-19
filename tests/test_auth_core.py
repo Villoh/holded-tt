@@ -19,7 +19,7 @@ class DummySessionStore:
 
 
 def test_describe_saved_session_returns_missing_without_cookies() -> None:
-    from holded_tt_cli.auth import describe_saved_session
+    from holded_tt.auth import describe_saved_session
 
     store = DummySessionStore(cookies={}, saved_at=None)
 
@@ -27,7 +27,7 @@ def test_describe_saved_session_returns_missing_without_cookies() -> None:
 
 
 def test_describe_saved_session_reports_likely_valid_for_recent_saved_at() -> None:
-    from holded_tt_cli.auth import describe_saved_session
+    from holded_tt.auth import describe_saved_session
 
     now = datetime(2026, 4, 12, 12, 0, tzinfo=UTC)
     store = DummySessionStore(
@@ -52,7 +52,7 @@ def test_describe_saved_session_reports_likely_valid_for_recent_saved_at() -> No
 def test_describe_saved_session_reports_unknown_for_untrusted_timestamps(
     saved_at: str | None, now: datetime
 ) -> None:
-    from holded_tt_cli.auth import describe_saved_session
+    from holded_tt.auth import describe_saved_session
 
     store = DummySessionStore(cookies={"hat": "token"}, saved_at=saved_at)
 
@@ -60,7 +60,7 @@ def test_describe_saved_session_reports_unknown_for_untrusted_timestamps(
 
 
 def test_require_saved_session_raises_missing_auth_with_login_hint() -> None:
-    from holded_tt_cli.auth import MissingAuthenticationError, require_saved_session
+    from holded_tt.auth import MissingAuthenticationError, require_saved_session
 
     store = DummySessionStore(cookies={}, saved_at=None)
 
@@ -71,7 +71,7 @@ def test_require_saved_session_raises_missing_auth_with_login_hint() -> None:
 
 
 def test_require_saved_session_raises_expired_auth_with_login_hint() -> None:
-    from holded_tt_cli.auth import ExpiredAuthenticationError, require_saved_session
+    from holded_tt.auth import ExpiredAuthenticationError, require_saved_session
 
     store = DummySessionStore(
         cookies={"hat": "token"},
@@ -88,7 +88,7 @@ def test_require_saved_session_raises_expired_auth_with_login_hint() -> None:
 
 
 def test_parse_saved_at_treats_naive_datetime_as_utc() -> None:
-    from holded_tt_cli.auth import _parse_saved_at
+    from holded_tt.auth import _parse_saved_at
 
     # No timezone info → should be treated as UTC and returned with tzinfo
     result = _parse_saved_at("2026-04-10T08:00:00")
@@ -100,7 +100,7 @@ def test_parse_saved_at_treats_naive_datetime_as_utc() -> None:
 
 
 def test_require_saved_session_returns_cookies_when_valid() -> None:
-    from holded_tt_cli.auth import require_saved_session
+    from holded_tt.auth import require_saved_session
 
     now = datetime(2026, 4, 12, 12, 0, tzinfo=UTC)
     store = DummySessionStore(
@@ -114,7 +114,7 @@ def test_require_saved_session_returns_cookies_when_valid() -> None:
 
 
 def test_validate_saved_session_reports_missing_without_cookies() -> None:
-    from holded_tt_cli.auth import validate_saved_session
+    from holded_tt.auth import validate_saved_session
 
     store = DummySessionStore(cookies={}, saved_at=None)
 
@@ -122,7 +122,7 @@ def test_validate_saved_session_reports_missing_without_cookies() -> None:
 
 
 def test_validate_saved_session_reports_active_when_discover_succeeds() -> None:
-    from holded_tt_cli.auth import validate_saved_session
+    from holded_tt.auth import validate_saved_session
 
     seen_paths: list[str] = []
     store = DummySessionStore(cookies={"hat": "token"}, saved_at=None)
@@ -172,7 +172,7 @@ def test_validate_saved_session_reports_active_when_discover_succeeds() -> None:
 def test_validate_saved_session_maps_discover_failures_to_status(
     response, expected: str
 ) -> None:
-    from holded_tt_cli.auth import validate_saved_session
+    from holded_tt.auth import validate_saved_session
 
     store = DummySessionStore(cookies={"hat": "token"}, saved_at=None)
 
@@ -185,7 +185,7 @@ def test_validate_saved_session_maps_discover_failures_to_status(
 
 
 def test_primary_login_normalizes_two_factor_requirement() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -211,7 +211,7 @@ def test_primary_login_normalizes_two_factor_requirement() -> None:
 
 
 def test_primary_login_returns_masked_contact_when_present() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -231,7 +231,7 @@ def test_primary_login_returns_masked_contact_when_present() -> None:
 
 def test_confirm_two_factor_exchanges_one_time_token() -> None:
     """confirm_two_factor calls _exchange_one_time_token when response has a token."""
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     exchanged: list[str] = []
 
@@ -258,8 +258,8 @@ def test_confirm_two_factor_exchanges_one_time_token() -> None:
 
 
 def test_confirm_two_factor_raises_on_http_error() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
-    from holded_tt_cli.errors import HoldedCliError
+    from holded_tt.auth import HoldedAuthClient
+    from holded_tt.errors import HoldedCliError
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -275,7 +275,7 @@ def test_confirm_two_factor_raises_on_http_error() -> None:
 
 
 def test_confirm_two_factor_ignores_unreadable_success_payload() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     exchanged: list[str] = []
 
@@ -295,7 +295,7 @@ def test_confirm_two_factor_ignores_unreadable_success_payload() -> None:
 
 
 def test_export_cookies_returns_all_jar_cookies() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -314,8 +314,8 @@ def test_export_cookies_returns_all_jar_cookies() -> None:
 
 def test_read_payload_raises_on_http_error_status() -> None:
     """_read_payload raises HoldedCliError when the response is a 4xx/5xx."""
-    from holded_tt_cli.auth import HoldedAuthClient
-    from holded_tt_cli.errors import HoldedCliError
+    from holded_tt.auth import HoldedAuthClient
+    from holded_tt.errors import HoldedCliError
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -331,8 +331,8 @@ def test_read_payload_raises_on_http_error_status() -> None:
 
 
 def test_read_payload_raises_on_invalid_json() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
-    from holded_tt_cli.errors import HoldedCliError
+    from holded_tt.auth import HoldedAuthClient
+    from holded_tt.errors import HoldedCliError
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -348,8 +348,8 @@ def test_read_payload_raises_on_invalid_json() -> None:
 
 
 def test_read_payload_raises_on_non_dict_payload() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
-    from holded_tt_cli.errors import HoldedCliError
+    from holded_tt.auth import HoldedAuthClient
+    from holded_tt.errors import HoldedCliError
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
@@ -364,9 +364,9 @@ def test_read_payload_raises_on_non_dict_payload() -> None:
     assert "unexpected" in exc_info.value.message.lower()
 
 
-def test_send_raises_holded_tt_cli_error_on_network_failure() -> None:
-    from holded_tt_cli.auth import HoldedAuthClient
-    from holded_tt_cli.errors import HoldedCliError
+def test_send_raises_holded_tt_error_on_network_failure() -> None:
+    from holded_tt.auth import HoldedAuthClient
+    from holded_tt.errors import HoldedCliError
 
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused", request=request)
@@ -380,7 +380,7 @@ def test_send_raises_holded_tt_cli_error_on_network_failure() -> None:
 
 def test_extract_cookie_from_headers_injects_missing_cookie() -> None:
     """When a cookie is not in the jar, _extract_cookie_from_headers reads Set-Cookie."""
-    from holded_tt_cli.auth import HoldedAuthClient
+    from holded_tt.auth import HoldedAuthClient
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":

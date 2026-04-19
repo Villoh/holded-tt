@@ -12,8 +12,8 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from holded_tt_cli import __version__
-from holded_tt_cli.commands import (
+from holded_tt import __version__
+from holded_tt.commands import (
     clock_app,
     employee_command,
     employees_command,
@@ -23,10 +23,10 @@ from holded_tt_cli.commands import (
     track_app,
     workplaces_command,
 )
-from holded_tt_cli.commands.config import CONFIG_HELP, set_command, show_command
-from holded_tt_cli.console import render_error
-from holded_tt_cli.errors import HoldedCliError
-from holded_tt_cli.state import create_app_state
+from holded_tt.commands.config import CONFIG_HELP, set_command, show_command
+from holded_tt.console import render_error
+from holded_tt.errors import HoldedCliError
+from holded_tt.state import create_app_state
 
 
 app = typer.Typer(

@@ -15,10 +15,10 @@ import typer
 
 def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
     """Redirect all runtime file paths to a temp directory. Returns path dict."""
-    paths_module = importlib.import_module("holded_tt_cli.paths")
-    session_module = importlib.import_module("holded_tt_cli.session")
-    state_module = importlib.import_module("holded_tt_cli.state")
-    config_module = importlib.import_module("holded_tt_cli.config")
+    paths_module = importlib.import_module("holded_tt.paths")
+    session_module = importlib.import_module("holded_tt.session")
+    state_module = importlib.import_module("holded_tt.state")
+    config_module = importlib.import_module("holded_tt.config")
 
     config_dir = base_dir / "holded-tt-cli"
     config_file = config_dir / "config.toml"
@@ -67,7 +67,7 @@ def _write_holiday_cache(holidays_file: Path, year: int, holidays: list[str]) ->
 def test_track_requires_date_argument(tmp_path: Path, runner, monkeypatch) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(cli_module.app, ["track"])
 
@@ -78,7 +78,7 @@ def test_track_requires_date_argument(tmp_path: Path, runner, monkeypatch) -> No
 def test_track_rejects_inverted_date_range(tmp_path: Path, runner, monkeypatch) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app, ["track", "--from", "2026-04-10", "--to", "2026-04-01"]
@@ -95,7 +95,7 @@ def test_track_dry_run_shows_table_for_week(
     _write_session(paths["session_file"])
     # Cache an empty holiday set so no API call is needed
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     # 2026-04-06 Mon to 2026-04-10 Fri = 5 working days
     result = runner.invoke(
@@ -114,7 +114,7 @@ def test_track_dry_run_excludes_weekends_by_default(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     # 2026-04-06 Mon to 2026-04-12 Sun = 5 working days, 2 weekend days
     result = runner.invoke(
@@ -132,7 +132,7 @@ def test_track_dry_run_includes_weekends_when_flag_given(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -158,7 +158,7 @@ def test_track_dry_run_excludes_cached_holidays(
     _write_session(paths["session_file"])
     # 2026-04-17 is Good Friday — mark it as a holiday
     _write_holiday_cache(paths["holidays_file"], 2026, ["2026-04-17"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     # Mon 14 to Fri 17 = 4 working days, minus holiday on Fri = 3
     result = runner.invoke(
@@ -176,7 +176,7 @@ def test_track_dry_run_today_registers_today(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], date.today().year, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(cli_module.app, ["track", "--today", "--dry-run"])
 
@@ -195,7 +195,7 @@ def test_track_dry_run_shows_pauses_in_table(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -219,7 +219,7 @@ def test_track_rejects_malformed_pause(tmp_path: Path, runner, monkeypatch) -> N
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -244,7 +244,7 @@ def test_track_without_session_shows_auth_error(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     # No session file written
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -270,9 +270,9 @@ def _fake_state_with_files(
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
 
-    state_module = importlib.import_module("holded_tt_cli.state")
-    config_module = importlib.import_module("holded_tt_cli.config")
-    session_module = importlib.import_module("holded_tt_cli.session")
+    state_module = importlib.import_module("holded_tt.state")
+    config_module = importlib.import_module("holded_tt.config")
+    session_module = importlib.import_module("holded_tt.session")
 
     return SimpleNamespace(
         session_store=session_module.SessionStore(),
@@ -294,7 +294,7 @@ def _patch_client(
     day_data=None,
 ):
     """Patch HoldedClient in track module to record calls."""
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
     if timetracking_data is not None or day_data is not None:
         monkeypatch.setattr(
             track_module, "ZoneInfo", lambda *_: timezone(timedelta(hours=2))
@@ -335,7 +335,7 @@ def test_validate_pause_rejects_reversed_times(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     # "13:00-12:00" — start >= end → BadParameter
     result = runner.invoke(
@@ -356,7 +356,7 @@ def test_validate_pause_rejects_reversed_times(
 
 
 def test_hhmm_to_minutes_converts_correctly() -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     assert track_module._hhmm_to_minutes("08:30") == 510
     assert track_module._hhmm_to_minutes("00:00") == 0
@@ -364,7 +364,7 @@ def test_hhmm_to_minutes_converts_correctly() -> None:
 
 
 def test_resolve_single_date_supports_today_and_requires_value() -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     assert track_module._resolve_single_date("2026-04-07", False) == date(2026, 4, 7)
     assert track_module._resolve_single_date(None, True) == date.today()
@@ -373,7 +373,7 @@ def test_resolve_single_date_supports_today_and_requires_value() -> None:
 
 
 def test_timezone_for_day_falls_back_to_utc_for_unknown_timezone(monkeypatch) -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     def raising_zoneinfo(_name: str):
         raise track_module.ZoneInfoNotFoundError("missing tzdata")
@@ -386,7 +386,7 @@ def test_timezone_for_day_falls_back_to_utc_for_unknown_timezone(monkeypatch) ->
 
 
 def test_build_trackers_falls_back_for_european_timezones(monkeypatch) -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     def raising_zoneinfo(_name: str):
         raise track_module.ZoneInfoNotFoundError("missing tzdata")
@@ -436,7 +436,7 @@ def test_build_trackers_falls_back_for_european_timezones(monkeypatch) -> None:
 
 
 def test_resolve_update_rows_rejects_multiple_invalid_shapes() -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     with pytest.raises(track_module.InputError) as exc_info:
         track_module._resolve_update_rows(
@@ -454,7 +454,7 @@ def test_resolve_update_rows_rejects_multiple_invalid_shapes() -> None:
 
 
 def test_resolve_tracker_for_update_handles_running_and_fallbacks() -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     with pytest.raises(track_module.InputError) as exc_info:
         track_module._resolve_tracker_for_update(
@@ -493,7 +493,7 @@ def test_resolve_tracker_for_update_handles_running_and_fallbacks() -> None:
 def test_extract_pause_windows_and_format_tracker_time_handle_invalid_values(
     monkeypatch,
 ) -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
     monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: timezone.utc)
 
     pauses = track_module._extract_pause_windows(
@@ -531,7 +531,7 @@ def test_extract_pause_windows_and_format_tracker_time_handle_invalid_values(
 def test_render_trackers_table_formats_local_times_and_skips_broken_rows(
     monkeypatch,
 ) -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
     monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: timezone.utc)
 
     table = track_module._render_trackers_table(
@@ -568,7 +568,7 @@ def test_render_trackers_table_formats_local_times_and_skips_broken_rows(
 
 
 def test_resolve_track_days_can_skip_holiday_lookup() -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     days = track_module._resolve_track_days(
         SimpleNamespace(holidays_file=None),
@@ -584,7 +584,7 @@ def test_resolve_track_days_can_skip_holiday_lookup() -> None:
 
 
 def test_run_with_cli_error_handling_translates_cli_errors(monkeypatch) -> None:
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
     rendered: list[str] = []
 
     monkeypatch.setattr(
@@ -606,7 +606,7 @@ def test_track_only_from_without_to_shows_error(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(cli_module.app, ["track", "--from", "2026-04-07"])
 
@@ -621,7 +621,7 @@ def test_track_dry_run_shows_no_working_days_message(
     _write_session(paths["session_file"])
     # Mark the entire range as holidays
     _write_holiday_cache(paths["holidays_file"], 2026, ["2026-04-07"])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -638,7 +638,7 @@ def test_track_dry_run_shows_workplace_in_context_line(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     _write_holiday_cache(paths["holidays_file"], 2026, [])
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
         cli_module.app,
@@ -665,8 +665,8 @@ def test_resolve_holidays_fetches_from_api_when_cache_missing(
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
     # No holiday cache written → _resolve_holidays will call fetch_holidays
-    cli_module = importlib.import_module("holded_tt_cli.cli")
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    cli_module = importlib.import_module("holded_tt.cli")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     fetch_calls: list = []
 
@@ -692,9 +692,9 @@ def test_resolve_holidays_fetches_from_api_when_cache_missing(
         def submit_bulk_timetracking(self, payload):
             pass
 
-    state_module = importlib.import_module("holded_tt_cli.state")
-    config_module = importlib.import_module("holded_tt_cli.config")
-    session_module = importlib.import_module("holded_tt_cli.session")
+    state_module = importlib.import_module("holded_tt.state")
+    config_module = importlib.import_module("holded_tt.config")
+    session_module = importlib.import_module("holded_tt.session")
 
     fake_state = SimpleNamespace(
         session_store=session_module.SessionStore(),
@@ -722,7 +722,7 @@ def test_resolve_holidays_skips_live_fetch_on_dry_run_when_cache_missing(
     tmp_path: Path, monkeypatch
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
-    track_module = importlib.import_module("holded_tt_cli.commands.track")
+    track_module = importlib.import_module("holded_tt.commands.track")
 
     fake_state = SimpleNamespace(
         session_store=object(),
@@ -761,7 +761,7 @@ def test_resolve_holidays_skips_live_fetch_on_dry_run_when_cache_missing(
 def test_track_submit_calls_check_and_submit(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     _patch_client(monkeypatch, cli_module, fake_state, calls=calls)
@@ -794,7 +794,7 @@ def test_track_submit_calls_check_and_submit(
 def test_track_submit_uses_configured_pause_defaults_when_flag_is_omitted(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     fake_state.config.pause = ["14:00-14:30"]
     calls: list = []
@@ -826,7 +826,7 @@ def test_track_submit_uses_configured_pause_defaults_when_flag_is_omitted(
 def test_track_submit_builds_bulk_create_payload_with_pauses(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     _patch_client(monkeypatch, cli_module, fake_state, calls=calls)
@@ -870,7 +870,7 @@ def test_track_submit_builds_bulk_create_payload_with_pauses(
 def test_track_submit_cli_pause_overrides_configured_pause_defaults(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     fake_state.config.pause = ["14:00-14:30"]
     calls: list = []
@@ -898,7 +898,7 @@ def test_track_submit_cli_pause_overrides_configured_pause_defaults(
 def test_track_show_lists_tracker_ids_for_date(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     day_data = {
@@ -956,7 +956,7 @@ def test_track_show_lists_tracker_ids_for_date(
 def test_track_show_lists_tracker_ids_for_range(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     timetracking_data = [
@@ -984,7 +984,7 @@ def test_track_show_lists_tracker_ids_for_range(
 def test_track_show_without_data_reports_empty(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     _patch_client(monkeypatch, cli_module, fake_state, calls=calls, day_data={})
@@ -998,7 +998,7 @@ def test_track_show_without_data_reports_empty(
 def test_track_update_builds_tracker_update_payload(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     day_data = {
@@ -1062,7 +1062,7 @@ def test_track_update_builds_tracker_update_payload(
 def test_track_update_range_updates_each_day_one_by_one(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     timetracking_data = [
@@ -1130,7 +1130,7 @@ def test_track_update_range_updates_each_day_one_by_one(
 def test_track_update_range_skips_weekends_by_default(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     timetracking_data = [
@@ -1179,7 +1179,7 @@ def test_track_update_range_skips_weekends_by_default(
 def test_track_update_range_can_include_weekends(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     timetracking_data = [
@@ -1257,7 +1257,7 @@ def test_track_update_range_can_include_weekends(
 def test_track_update_range_rejects_multiple_trackers_in_day(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     timetracking_data = [
@@ -1299,7 +1299,7 @@ def test_track_update_range_rejects_multiple_trackers_in_day(
 def test_track_update_keeps_existing_values_and_confirms_by_default(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     day_data = {
@@ -1354,7 +1354,7 @@ def test_track_update_keeps_existing_values_and_confirms_by_default(
 def test_track_update_can_abort_confirmation(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     day_data = {
@@ -1399,7 +1399,7 @@ def test_track_update_can_abort_confirmation(
 def test_track_update_rejects_missing_tracker_id(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     day_data = {"date": "2026-04-07", "trackers": []}
@@ -1430,7 +1430,7 @@ def test_track_update_rejects_missing_tracker_id(
 def test_track_submit_shows_success_message(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     _patch_client(monkeypatch, cli_module, fake_state, calls=[])
 
@@ -1446,7 +1446,7 @@ def test_track_submit_shows_success_message(
 def test_track_submit_large_range_prompts_confirmation(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     # Override holiday cache to cover 2026 full range
     _write_holiday_cache(fake_state.holidays_file, 2026, [])
@@ -1465,7 +1465,7 @@ def test_track_submit_large_range_prompts_confirmation(
 def test_track_submit_yes_flag_skips_confirmation(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    cli_module = importlib.import_module("holded_tt_cli.cli")
+    cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     _write_holiday_cache(fake_state.holidays_file, 2026, [])
     calls: list = []
