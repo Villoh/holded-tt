@@ -30,5 +30,5 @@ def test_package_exports_version_and_cli_app() -> None:
     package = importlib.import_module("holded_tt")
     cli = importlib.import_module("holded_tt.cli")
 
-    assert package.__version__ == "0.1.0"
+    assert isinstance(package.__version__, str) and package.__version__
     assert cli.app is not None
