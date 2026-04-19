@@ -114,7 +114,7 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
     state_module = importlib.import_module("holded_tt.state")
     config_module = importlib.import_module("holded_tt.config")
 
-    config_dir = base_dir / "holded-tt-cli"
+    config_dir = base_dir / "holded-tt"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
     holidays_file = config_dir / "holidays.json"

@@ -58,11 +58,11 @@ holded-tt track --from 2026-01-07 --to 2026-04-07
 
 ## Runtime storage
 
-The CLI stores its runtime files in a per-user config directory resolved via `platformdirs` as `holded-tt-cli`.
+The CLI stores its runtime files in a per-user config directory resolved via `platformdirs` as `holded-tt`.
 
-- Linux: `~/.config/holded-tt-cli`
-- macOS: `~/Library/Application Support/holded-tt-cli`
-- Windows: `C:\Users\<user>\AppData\Roaming\holded-tt-cli`
+- Linux: `~/.config/holded-tt`
+- macOS: `~/Library/Application Support/holded-tt`
+- Windows: `C:\Users\<user>\AppData\Roaming\holded-tt`
 
 Files created there:
 

@@ -203,7 +203,7 @@ def test_clock_without_session_raises_auth_error(
     config_module = importlib.import_module("holded_tt.config")
     auth_module = importlib.import_module("holded_tt.auth")
 
-    config_dir = tmp_path / "holded-tt-cli"
+    config_dir = tmp_path / "holded-tt"
     session_file = config_dir / "session.json"
 
     monkeypatch.setattr(paths_module, "CONFIG_DIR", config_dir)
