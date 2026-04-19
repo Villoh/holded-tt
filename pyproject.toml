@@ -3,6 +3,7 @@ name = "holded-tt-cli"
 version = "0.1.0"
 description = "CLI tool for automating time tracking on Holded"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12",

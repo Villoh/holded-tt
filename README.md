@@ -1,4 +1,4 @@
-# Holded TT CLI
+# Holded TT
 
 `holded-tt` is an unofficial Python CLI for automating time tracking on [Holded](https://app.holded.com).
 It is a focused time-tracking tool, not a general-purpose Holded client.
@@ -323,3 +323,9 @@ pip install -e .
 ## Security note
 
 `session.json` stores sensitive authentication cookies. The CLI must never log those cookies, and file permissions are applied on a best-effort basis (0600 where supported).
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
