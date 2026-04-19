@@ -1,6 +1,6 @@
 [project]
 name = "holded-tt"
-version = "0.1.0"
+dynamic = ["version"]
 description = "CLI tool for automating time tracking on Holded"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -19,8 +19,11 @@ dependencies = [
 holded-tt = "holded_tt.cli:app"
 
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.24", "hatch-vcs>=0.4"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/holded_tt"]
