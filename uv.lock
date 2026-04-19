@@ -177,8 +177,7 @@ wheels = [
 ]
 
 [[package]]
-name = "holded-tt-cli"
-version = "0.1.0"
+name = "holded-tt"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
