@@ -30,6 +30,8 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
+pytest.xml
 .tox/
 
 # Type checkers
