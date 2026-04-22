@@ -16,13 +16,14 @@ It is a focused time-tracking tool, not a general-purpose Holded client.
 - An interactive terminal for `holded-tt login` (email/password prompt, plus 2FA prompt when required)
 
 ```bash
-# Editable install for development
-pip install -e .
+# Install from PyPI (recommended for end users)
+pipx install holded-tt
 
-# Isolated tool install (recommended for end users)
-pipx install .
 # or
-uv tool install .
+uv tool install holded-tt
+
+# or, inside an existing virtualenv
+pip install holded-tt
 ```
 
 After installation, you can check the global CLI version with:
