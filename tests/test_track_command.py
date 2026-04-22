@@ -1478,3 +1478,70 @@ def test_track_submit_yes_flag_skips_confirmation(
 
     assert result.exit_code == 0
     assert any(op == "submit" for op, _ in calls)
+
+
+class TestTrackDateFlag:
+    """Tests for the --date shorthand on the root track command."""
+
+    def test_date_flag_dry_run(self, tmp_path: Path, runner, monkeypatch) -> None:
+        """--date alone with --dry-run exits 0 and lists only that date."""
+        paths = _patch_runtime_files(tmp_path, monkeypatch)
+        _write_session(paths["session_file"])
+        _write_holiday_cache(paths["holidays_file"], 2026, [])
+        cli_module = importlib.import_module("holded_tt.cli")
+
+        result = runner.invoke(
+            cli_module.app,
+            ["track", "--date", "2026-04-07", "--dry-run"],
+        )
+
+        assert result.exit_code == 0
+        assert "2026-04-07" in result.output
+
+    def test_date_conflicts_with_from(
+        self, tmp_path: Path, runner, monkeypatch
+    ) -> None:
+        """--date combined with --from raises InputError (exit 1)."""
+        paths = _patch_runtime_files(tmp_path, monkeypatch)
+        _write_session(paths["session_file"])
+        cli_module = importlib.import_module("holded_tt.cli")
+
+        result = runner.invoke(
+            cli_module.app,
+            ["track", "--date", "2026-04-07", "--from", "2026-04-07"],
+        )
+
+        assert result.exit_code == 1
+        assert "cannot be combined" in result.output
+
+    def test_date_conflicts_with_to(
+        self, tmp_path: Path, runner, monkeypatch
+    ) -> None:
+        """--date combined with --to raises InputError (exit 1)."""
+        paths = _patch_runtime_files(tmp_path, monkeypatch)
+        _write_session(paths["session_file"])
+        cli_module = importlib.import_module("holded_tt.cli")
+
+        result = runner.invoke(
+            cli_module.app,
+            ["track", "--date", "2026-04-07", "--to", "2026-04-07"],
+        )
+
+        assert result.exit_code == 1
+        assert "cannot be combined" in result.output
+
+    def test_date_conflicts_with_today(
+        self, tmp_path: Path, runner, monkeypatch
+    ) -> None:
+        """--date combined with --today raises InputError (exit 1)."""
+        paths = _patch_runtime_files(tmp_path, monkeypatch)
+        _write_session(paths["session_file"])
+        cli_module = importlib.import_module("holded_tt.cli")
+
+        result = runner.invoke(
+            cli_module.app,
+            ["track", "--date", "2026-04-07", "--today"],
+        )
+
+        assert result.exit_code == 1
+        assert "cannot be combined" in result.output
