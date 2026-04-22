@@ -25,6 +25,7 @@ Weekends and workplace holidays are excluded by default.
 Example:
   holded-tt track --from 2026-04-01 --to 2026-04-30
   holded-tt track --today
+  holded-tt track --date 2026-04-30
   holded-tt track --from 2026-04-01 --to 2026-04-30 --dry-run
 """
 
@@ -493,6 +494,11 @@ def track_command(
         None, "--to", help="End date in YYYY-MM-DD format."
     ),
     today: bool = typer.Option(False, "--today", help="Register today only."),
+    date: Optional[str] = typer.Option(
+        None,
+        "--date",
+        help="Single date (YYYY-MM-DD). Shorthand for --from DATE --to DATE. Cannot be combined with --from, --to, or --today.",
+    ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview days without submitting."
     ),
@@ -524,6 +530,15 @@ def track_command(
       holded-tt track --from 2026-04-01 --to 2026-04-30
     """
     state: AppState = ctx.obj
+
+    if date is not None and (from_date or to_date or today):
+        raise InputError(
+            message="--date cannot be combined with --from, --to, or --today.",
+            hint="Use --date YYYY-MM-DD alone, or use --from/--to for a range.",
+        )
+    if date is not None:
+        from_date = date
+        to_date = date
 
     resolved_from, resolved_to = _resolve_date_range(from_date, to_date, today)
 
@@ -818,6 +833,11 @@ def track_app_callback(
         None, "--to", help="End date in YYYY-MM-DD format."
     ),
     today: bool = typer.Option(False, "--today", help="Register today only."),
+    date: Optional[str] = typer.Option(
+        None,
+        "--date",
+        help="Single date (YYYY-MM-DD). Shorthand for --from DATE --to DATE. Cannot be combined with --from, --to, or --today.",
+    ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Preview days without submitting."
     ),
@@ -850,6 +870,7 @@ def track_app_callback(
             from_date=from_date,
             to_date=to_date,
             today=today,
+            date=date,
             dry_run=dry_run,
             include_weekends=include_weekends,
             include_holidays=include_holidays,
