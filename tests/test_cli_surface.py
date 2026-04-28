@@ -58,6 +58,7 @@ def test_root_help_is_available(runner) -> None:
     assert "login" in output
     assert "session" in output
     assert "workplaces" in output
+    assert "holidays" in output
     assert "employee" in output
     assert "organization" in output
     assert "personal-info" not in output

@@ -29,6 +29,7 @@ def temp_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "holded_tt.commands",
         "holded_tt.commands.config",
         "holded_tt.commands.employee",
+        "holded_tt.commands.holidays",
         "holded_tt.commands.login",
         "holded_tt.commands.session",
         "holded_tt.commands.track",
