@@ -18,6 +18,7 @@ from holded_tt.commands import (
     employee_command,
     employees_command,
     export_command,
+    holidays_command,
     login_command,
     session_command,
     track_app,
@@ -105,6 +106,10 @@ app.command(
         "  holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx"
     ),
 )(_with_cli_error_handling(export_command))
+app.command(
+    "holidays",
+    help="Show workplace holidays, using local cache when available.",
+)(_with_cli_error_handling(holidays_command))
 config_app.command("show")(_with_cli_error_handling(show_command))
 config_app.command("set")(_with_cli_error_handling(set_command))
 
