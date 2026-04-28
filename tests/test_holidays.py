@@ -133,12 +133,16 @@ def test_save_cache_writes_valid_json_with_year_and_holidays(tmp_path: Path) -> 
     from holded_tt.holidays import _save_cache
 
     cache_file = tmp_path / "holidays.json"
-    _save_cache(cache_file, 2026, ["2026-01-01", "2026-04-17"])
+    _save_cache(
+        cache_file,
+        2026,
+        [{"date": "2026-01-01", "name": "Año Nuevo"}, {"date": "2026-04-17", "name": "Viernes Santo"}],
+    )
 
     payload = json.loads(cache_file.read_text(encoding="utf-8"))
     assert payload["year"] == 2026
-    assert "2026-01-01" in payload["holidays"]
-    assert "2026-04-17" in payload["holidays"]
+    assert any(e["date"] == "2026-01-01" for e in payload["holidays"])
+    assert any(e["date"] == "2026-04-17" for e in payload["holidays"])
     assert "fetched_at" in payload
 
 
@@ -186,7 +190,7 @@ def test_extract_workplace_holidays_skips_invalid_date_values() -> None:
         ]
     }
 
-    assert extract_workplace_holidays(summary, 2026) == frozenset()
+    assert extract_workplace_holidays(summary, 2026) == {}
 
 
 def test_current_year_paris_returns_plausible_year() -> None:

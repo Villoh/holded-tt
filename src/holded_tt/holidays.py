@@ -29,7 +29,7 @@ def _load_cache(path: Path) -> dict:
         return {}
 
 
-def _save_cache(path: Path, year: int, holidays: list[str]) -> None:
+def _save_cache(path: Path, year: int, holidays: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "year": year,
@@ -44,40 +44,53 @@ def _save_cache(path: Path, year: int, holidays: list[str]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def get_cached_holidays(path: Path, year: int) -> frozenset[date] | None:
-    """Return cached holiday dates for year, or None if cache is stale or absent."""
+def get_cached_holidays(path: Path, year: int) -> dict[date, str] | None:
+    """Return cached holiday dates→names for year, or None if cache is stale or absent."""
     cache = _load_cache(path)
     if cache.get("year") != year:
         return None
-    result: set[date] = set()
-    for s in cache.get("holidays", []):
+    result: dict[date, str] = {}
+    for entry in cache.get("holidays", []):
         try:
-            result.add(date.fromisoformat(s))
-        except ValueError:
+            if isinstance(entry, str):
+                result[date.fromisoformat(entry)] = ""
+            elif isinstance(entry, dict):
+                d = date.fromisoformat(str(entry["date"])[:10])
+                result[d] = entry.get("name", "")
+        except (ValueError, KeyError):
             pass
-    return frozenset(result)
+    return result
 
 
-def extract_workplace_holidays(year_summary: dict, year: int) -> frozenset[date]:
+def extract_workplace_holidays(year_summary: dict, year: int) -> dict[date, str]:
     """Extract accepted workplace holidays from a Holded timeoff-year-summary payload."""
     time_offs = year_summary.get("workplaceTimeOffs", [])
-    holidays: set[date] = set()
+    holidays: dict[date, str] = {}
     for entry in time_offs:
         if (
             entry.get("assignationType") == "workplace"
             and entry.get("status") == "accepted"
         ):
+            holiday_date: date | None = None
             for key in ("date", "startDate", "start"):
                 raw = entry.get(key)
                 if raw:
                     try:
                         d = date.fromisoformat(str(raw)[:10])
                         if d.year == year:
-                            holidays.add(d)
+                            holiday_date = d
                     except ValueError:
                         pass
                     break
-    return frozenset(holidays)
+            if holiday_date is not None:
+                name = ""
+                for name_key in ("name", "description", "typeName"):
+                    val = entry.get(name_key)
+                    if val:
+                        name = str(val)
+                        break
+                holidays[holiday_date] = name
+    return holidays
 
 
 def fetch_holidays(
@@ -85,7 +98,7 @@ def fetch_holidays(
     cache_path: Path,
     year: int,
     workplace_id: str,
-) -> frozenset[date]:
+) -> dict[date, str]:
     """Return holidays for year, using cache when valid and fetching from API otherwise."""
     cached = get_cached_holidays(cache_path, year)
     if cached is not None:
@@ -93,5 +106,9 @@ def fetch_holidays(
 
     summary = client.get_year_summary(year, workplace_id)
     holidays = extract_workplace_holidays(summary, year)
-    _save_cache(cache_path, year, sorted(d.isoformat() for d in holidays))
+    _save_cache(
+        cache_path,
+        year,
+        [{"date": d.isoformat(), "name": name} for d, name in sorted(holidays.items())],
+    )
     return holidays

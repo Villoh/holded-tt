@@ -34,7 +34,7 @@ def holidays_command(
 
     target_year = year if year is not None else _current_year_paris()
 
-    holidays: frozenset[date] | None = None
+    holidays: dict[date, str] | None = None
     source = "cached"
 
     if not refresh:
@@ -47,7 +47,7 @@ def holidays_command(
         _save_cache(
             state.holidays_file,
             target_year,
-            sorted(d.isoformat() for d in holidays),
+            [{"date": d.isoformat(), "name": name} for d, name in sorted(holidays.items())],
         )
         source = "refreshed" if refresh else "fetched"
 
@@ -55,7 +55,7 @@ def holidays_command(
         console.print(f"[dim]No holidays found for {target_year}.[/dim]")
         raise typer.Exit(0)
 
-    sorted_holidays = sorted(holidays)
+    sorted_dates = sorted(holidays.keys())
 
     table = Table(
         show_header=True,
@@ -66,15 +66,16 @@ def holidays_command(
     table.add_column("#", style="dim", width=4)
     table.add_column("Date", min_width=12)
     table.add_column("Day", min_width=11, style="dim")
+    table.add_column("Name", min_width=20)
 
-    for i, d in enumerate(sorted_holidays, 1):
-        table.add_row(str(i), d.isoformat(), d.strftime("%A"))
+    for i, d in enumerate(sorted_dates, 1):
+        table.add_row(str(i), d.isoformat(), d.strftime("%A"), holidays[d])
 
     console.print(table)
 
     summary_line = Text()
     summary_line.append(
-        f"{len(sorted_holidays)} holiday(s)  ·  {target_year}  ·  {source}",
+        f"{len(sorted_dates)} holiday(s)  ·  {target_year}  ·  {source}",
         style="dim",
     )
     console.print(summary_line)
