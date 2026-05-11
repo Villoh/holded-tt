@@ -18,9 +18,9 @@ from holded_tt.commands import (
     employee_command,
     employees_command,
     export_command,
-    holidays_command,
     login_command,
     session_command,
+    timeoff_app,
     track_app,
     workplaces_command,
 )
@@ -106,10 +106,6 @@ app.command(
         "  holded-tt export --from 2026-04-01 --to 2026-04-30 --format xlsx"
     ),
 )(_with_cli_error_handling(export_command))
-app.command(
-    "holidays",
-    help="Show workplace holidays, using local cache when available.",
-)(_with_cli_error_handling(holidays_command))
 config_app.command("show")(_with_cli_error_handling(show_command))
 config_app.command("set")(_with_cli_error_handling(set_command))
 
@@ -122,4 +118,5 @@ def _config_callback(ctx: typer.Context) -> None:
 
 app.add_typer(clock_app, name="clock")
 app.add_typer(config_app, name="config")
+app.add_typer(timeoff_app, name="timeoff")
 app.add_typer(track_app, name="track")
