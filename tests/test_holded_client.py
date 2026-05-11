@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta, timezone
 
 import httpx
 import pytest
@@ -13,8 +13,21 @@ def _session_store():
     from holded_tt.session import SessionStore
 
     store = SessionStore()
-    store._state = {"cookies": {"hat": "tok"}, "saved_at": "2026-04-10T08:00:00Z"}
+    saved_at = (
+        datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    store._state = {"cookies": {"hat": "tok"}, "saved_at": saved_at}
+    store._loaded = True
     return store
+
+
+def test_session_store_fixture_uses_preloaded_state() -> None:
+    store = _session_store()
+
+    assert store._loaded is True
 
 
 def test_make_datetime_param_includes_utc_offset(monkeypatch) -> None:

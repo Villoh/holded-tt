@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 from io import BytesIO
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -131,12 +131,18 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
 
 
 def _write_session(session_file: Path) -> None:
+    saved_at = (
+        datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
     session_file.parent.mkdir(parents=True, exist_ok=True)
     session_file.write_text(
         json.dumps(
             {
                 "cookies": {"hat": "tok", "PHPSESSID": "sid"},
-                "saved_at": "2026-04-10T08:00:00Z",
+                "saved_at": saved_at,
             }
         ),
         encoding="utf-8",
