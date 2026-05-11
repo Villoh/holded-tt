@@ -128,3 +128,14 @@ def test_parse_days_summary_extracts_key_fields() -> None:
     assert result["accrued_expiration"] == "march"
     assert result["breakdown_available"]["policy"] == 24
     assert result["breakdown_used"]["accrued"] == 9
+
+
+def test_build_request_start_formats_iso8601_with_offset() -> None:
+    from holded_tt.timeoff import build_request_start
+    from datetime import date
+
+    result = build_request_start(date(2026, 6, 15), "Europe/Madrid")
+
+    # Should be an ISO-8601 datetime string with a UTC offset (not Z)
+    assert result.startswith("2026-06-15T00:00:00")
+    assert "+" in result or result.endswith("-00:00")
