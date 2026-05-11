@@ -139,3 +139,24 @@ def test_build_request_start_formats_iso8601_with_offset() -> None:
     # Should be an ISO-8601 datetime string with a UTC offset (not Z)
     assert result.startswith("2026-06-15T00:00:00")
     assert "+" in result or result.endswith("-00:00")
+
+
+def test_holded_client_has_get_timeoff_summary() -> None:
+    from holded_tt.holded_client import HoldedClient
+    assert hasattr(HoldedClient, "get_timeoff_summary")
+
+def test_holded_client_has_request_timeoff() -> None:
+    from holded_tt.holded_client import HoldedClient
+    assert hasattr(HoldedClient, "request_timeoff")
+
+def test_holded_client_has_cancel_timeoff() -> None:
+    from holded_tt.holded_client import HoldedClient
+    assert hasattr(HoldedClient, "cancel_timeoff")
+
+def test_holded_client_has_get_timeoff_details() -> None:
+    from holded_tt.holded_client import HoldedClient
+    assert hasattr(HoldedClient, "get_timeoff_details")
+
+def test_holded_client_does_not_have_get_year_summary() -> None:
+    from holded_tt.holded_client import HoldedClient
+    assert not hasattr(HoldedClient, "get_year_summary")

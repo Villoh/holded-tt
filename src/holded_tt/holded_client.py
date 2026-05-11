@@ -203,14 +203,68 @@ class HoldedClient:
         )
         return self._parse_json(response)
 
-    def get_year_summary(self, year: int, workplace_id: str = "") -> dict[str, Any]:
-        """Fetch the time-off year summary for holiday extraction."""
+    def get_timeoff_summary(self, year: int) -> dict[str, Any]:
+        """Fetch the full timeoff year summary for the current employee."""
         response = self._get(
             "/internal/team/v2/timeoff-year-summary",
             params={"year": str(year)},
         )
         data = self._parse_json(response)
         return data if isinstance(data, dict) else {}
+
+    def request_timeoff(
+        self,
+        start: str,
+        timeoff_type_id: str,
+        day_period: str,
+        description: str = "",
+        end: str | None = None,
+    ) -> str:
+        """Submit a timeoff request. Returns the created request ID."""
+        data: dict[str, str] = {
+            "start": start,
+            "dayPeriod": day_period,
+            "description": description,
+            "timeoffTypeId": timeoff_type_id,
+        }
+        if end is not None:
+            data["end"] = end
+        response = self._post(
+            "/internal/team/v2/employee-request",
+            data=data,
+        )
+        result = self._parse_json(response)
+        if isinstance(result, dict):
+            timeoff_id = result.get("id")
+            if isinstance(timeoff_id, str) and timeoff_id:
+                return timeoff_id
+        raise HoldedApiError(
+            message="Unexpected response from timeoff request.",
+            hint="The API may have changed. Check your session with `holded-tt session`.",
+        )
+
+    def cancel_timeoff(self, timeoff_id: str) -> None:
+        """Cancel a pending timeoff request."""
+        response = self._post(
+            "/internal/team/v2/timeoff-cancel",
+            json={"timeoffId": timeoff_id},
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise HoldedApiError(
+                message=f"Cancel failed (HTTP {exc.response.status_code}).",
+                hint="Check that the timeoff ID is correct and is still pending.",
+            ) from exc
+
+    def get_timeoff_details(self, timeoff_ids: list[str]) -> list[dict[str, Any]]:
+        """Fetch full details for one or more timeoff requests."""
+        response = self._post(
+            "/internal/team/v2/timeoff-details",
+            json={"timeoffIds": timeoff_ids},
+        )
+        data = self._parse_json(response)
+        return data if isinstance(data, list) else []
 
     def check_bulk_timetracking(self, payload: dict[str, Any]) -> None:
         """Validate a set of timetracking entries without saving them (step 1). Returns None on success."""
