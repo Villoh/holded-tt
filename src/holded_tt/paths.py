@@ -10,4 +10,3 @@ CONFIG_DIR: Path = user_config_path(
 )
 CONFIG_FILE: Path = CONFIG_DIR / "config.toml"
 SESSION_FILE: Path = CONFIG_DIR / "session.json"
-HOLIDAYS_FILE: Path = CONFIG_DIR / "holidays.json"

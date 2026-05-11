@@ -156,7 +156,3 @@ def test_holded_client_has_cancel_timeoff() -> None:
 def test_holded_client_has_get_timeoff_details() -> None:
     from holded_tt.holded_client import HoldedClient
     assert hasattr(HoldedClient, "get_timeoff_details")
-
-def test_holded_client_does_not_have_get_year_summary() -> None:
-    from holded_tt.holded_client import HoldedClient
-    assert not hasattr(HoldedClient, "get_year_summary")

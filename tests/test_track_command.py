@@ -23,23 +23,19 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
     config_dir = base_dir / "holded-tt"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
-    holidays_file = config_dir / "holidays.json"
 
     monkeypatch.setattr(paths_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(paths_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(paths_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(paths_module, "HOLIDAYS_FILE", holidays_file)
     monkeypatch.setattr(config_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(session_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(state_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(state_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(state_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(state_module, "HOLIDAYS_FILE", holidays_file)
 
     return {
         "config_dir": config_dir,
         "session_file": session_file,
-        "holidays_file": holidays_file,
     }
 
 
@@ -52,14 +48,6 @@ def _write_session(session_file: Path) -> None:
                 "saved_at": "2026-04-10T08:00:00Z",
             }
         ),
-        encoding="utf-8",
-    )
-
-
-def _write_holiday_cache(holidays_file: Path, year: int, holidays: list[str]) -> None:
-    holidays_file.parent.mkdir(parents=True, exist_ok=True)
-    holidays_file.write_text(
-        json.dumps({"year": year, "holidays": holidays}),
         encoding="utf-8",
     )
 
@@ -93,8 +81,6 @@ def test_track_dry_run_shows_table_for_week(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    # Cache an empty holiday set so no API call is needed
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     # 2026-04-06 Mon to 2026-04-10 Fri = 5 working days
@@ -113,7 +99,6 @@ def test_track_dry_run_excludes_weekends_by_default(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     # 2026-04-06 Mon to 2026-04-12 Sun = 5 working days, 2 weekend days
@@ -131,7 +116,6 @@ def test_track_dry_run_includes_weekends_when_flag_given(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
@@ -212,7 +196,6 @@ def test_track_dry_run_today_registers_today(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], date.today().year, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(cli_module.app, ["track", "--today", "--dry-run"])
@@ -231,7 +214,6 @@ def test_track_dry_run_shows_pauses_in_table(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
@@ -255,7 +237,6 @@ def test_track_dry_run_shows_pauses_in_table(
 def test_track_rejects_malformed_pause(tmp_path: Path, runner, monkeypatch) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
@@ -280,7 +261,6 @@ def test_track_without_session_shows_auth_error(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     # No session file written
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
@@ -305,7 +285,6 @@ def _fake_state_with_files(
     """Patch runtime files and return a fake AppState with real config + session store."""
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
 
     state_module = importlib.import_module("holded_tt.state")
     config_module = importlib.import_module("holded_tt.config")
@@ -314,7 +293,6 @@ def _fake_state_with_files(
     return SimpleNamespace(
         session_store=session_module.SessionStore(),
         config=config_module.load_config(),
-        holidays_file=paths["holidays_file"],
         config_dir=paths["session_file"].parent,
         config_file=paths["session_file"].parent / "config.toml",
         session_file=paths["session_file"],
@@ -374,7 +352,6 @@ def test_validate_pause_rejects_reversed_times(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     # "13:00-12:00" — start >= end → BadParameter
@@ -611,7 +588,7 @@ def test_resolve_track_days_can_skip_holiday_lookup() -> None:
     track_module = importlib.import_module("holded_tt.commands.track")
 
     days = track_module._resolve_track_days(
-        SimpleNamespace(holidays_file=None),
+        SimpleNamespace(),
         date(2026, 4, 6),
         date(2026, 4, 7),
         "",
@@ -714,7 +691,6 @@ def test_track_dry_run_shows_workplace_in_context_line(
 ) -> None:
     paths = _patch_runtime_files(tmp_path, monkeypatch)
     _write_session(paths["session_file"])
-    _write_holiday_cache(paths["holidays_file"], 2026, [])
     cli_module = importlib.import_module("holded_tt.cli")
 
     result = runner.invoke(
@@ -1517,8 +1493,6 @@ def test_track_submit_large_range_prompts_confirmation(
 ) -> None:
     cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
-    # Override holiday cache to cover 2026 full range
-    _write_holiday_cache(fake_state.holidays_file, 2026, [])
     _patch_client(monkeypatch, cli_module, fake_state, calls=[])
 
     # 2026-04-06 to 2026-04-30 = 19 working days → triggers confirmation
@@ -1536,7 +1510,6 @@ def test_track_submit_yes_flag_skips_confirmation(
 ) -> None:
     cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
-    _write_holiday_cache(fake_state.holidays_file, 2026, [])
     calls: list = []
     _patch_client(monkeypatch, cli_module, fake_state, calls=calls)
 
@@ -1556,7 +1529,6 @@ class TestTrackDateFlag:
         """--date alone with --dry-run exits 0 and lists only that date."""
         paths = _patch_runtime_files(tmp_path, monkeypatch)
         _write_session(paths["session_file"])
-        _write_holiday_cache(paths["holidays_file"], 2026, [])
         cli_module = importlib.import_module("holded_tt.cli")
 
         result = runner.invoke(

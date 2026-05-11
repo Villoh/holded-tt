@@ -30,10 +30,8 @@ def test_runtime_paths_use_fixed_files_and_create_config_dir(
     assert paths.CONFIG_DIR.exists()
     assert paths.CONFIG_FILE.name == "config.toml"
     assert paths.SESSION_FILE.name == "session.json"
-    assert paths.HOLIDAYS_FILE.name == "holidays.json"
     assert paths.CONFIG_FILE.parent == paths.CONFIG_DIR
     assert paths.SESSION_FILE.parent == paths.CONFIG_DIR
-    assert paths.HOLIDAYS_FILE.parent == paths.CONFIG_DIR
 
 
 def test_config_load_and_save_preserve_defaults(temp_config_dir) -> None:

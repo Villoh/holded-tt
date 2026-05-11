@@ -68,7 +68,6 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("", "")
     grid.add_row("[dim]config[/dim]", Text(str(state.config_file), style="dim"))
     grid.add_row("[dim]session[/dim]", Text(str(state.session_file), style="dim"))
-    grid.add_row("[dim]holidays[/dim]", Text(str(state.holidays_file), style="dim"))
 
     get_output_console().print(
         Panel(

@@ -23,18 +23,15 @@ def _patch_runtime_files(base_dir: Path, monkeypatch) -> None:
     config_dir = base_dir / "holded-tt"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
-    holidays_file = config_dir / "holidays.json"
 
     monkeypatch.setattr(paths_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(paths_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(paths_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(paths_module, "HOLIDAYS_FILE", holidays_file)
     monkeypatch.setattr(config_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(session_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(state_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(state_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(state_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(state_module, "HOLIDAYS_FILE", holidays_file)
 
 
 def test_version_reports_package_version(runner) -> None:
@@ -58,7 +55,7 @@ def test_root_help_is_available(runner) -> None:
     assert "login" in output
     assert "session" in output
     assert "workplaces" in output
-    assert "holidays" in output
+    assert "timeoff" in output
     assert "employee" in output
     assert "organization" in output
     assert "personal-info" not in output
@@ -83,7 +80,6 @@ def test_root_callback_bootstraps_shared_state(
         config_dir=state_module.CONFIG_DIR,
         config_file=state_module.CONFIG_FILE,
         session_file=state_module.SESSION_FILE,
-        holidays_file=state_module.HOLIDAYS_FILE,
     )
 
     def fake_create_app_state() -> state_module.AppState:
@@ -167,7 +163,7 @@ def test_config_show_prints_defaults_and_local_paths(
     assert "pause" in result.stdout
     assert "config" in result.stdout
     assert "session" in result.stdout
-    assert "holidays" in result.stdout
+    assert "holidays" not in result.stdout
 
 
 def test_config_set_persists_allowed_keys(temp_config_dir, runner, monkeypatch) -> None:

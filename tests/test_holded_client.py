@@ -366,26 +366,6 @@ def test_pause_and_resume_tracker_return_api_payloads() -> None:
         }
 
 
-def test_get_year_summary_returns_dict_or_empty_dict() -> None:
-    from holded_tt.holded_client import HoldedClient
-
-    responses = iter(
-        [
-            {"status_code": 200, "json": {"year": 2026, "holidays": []}},
-            {"status_code": 200, "json": []},
-        ]
-    )
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(request=request, **next(responses))
-
-    with HoldedClient(
-        _session_store(), transport=httpx.MockTransport(handler)
-    ) as client:
-        assert client.get_year_summary(2026) == {"year": 2026, "holidays": []}
-        assert client.get_year_summary(2026) == {}
-
-
 def test_get_timetracking_pdf_wraps_http_errors(monkeypatch) -> None:
     import holded_tt.holded_client as holded_client
     from holded_tt.holded_client import HoldedApiError, HoldedClient

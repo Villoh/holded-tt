@@ -209,13 +209,11 @@ def test_clock_without_session_raises_auth_error(
     monkeypatch.setattr(paths_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(paths_module, "CONFIG_FILE", config_dir / "config.toml")
     monkeypatch.setattr(paths_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(paths_module, "HOLIDAYS_FILE", config_dir / "holidays.json")
     monkeypatch.setattr(config_module, "CONFIG_FILE", config_dir / "config.toml")
     monkeypatch.setattr(session_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(state_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(state_module, "CONFIG_FILE", config_dir / "config.toml")
     monkeypatch.setattr(state_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(state_module, "HOLIDAYS_FILE", config_dir / "holidays.json")
 
     cli_module = importlib.import_module("holded_tt.cli")
 

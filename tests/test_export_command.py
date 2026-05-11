@@ -117,18 +117,15 @@ def _patch_runtime_files(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> dic
     config_dir = base_dir / "holded-tt"
     config_file = config_dir / "config.toml"
     session_file = config_dir / "session.json"
-    holidays_file = config_dir / "holidays.json"
 
     monkeypatch.setattr(paths_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(paths_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(paths_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(paths_module, "HOLIDAYS_FILE", holidays_file)
     monkeypatch.setattr(config_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(session_module, "SESSION_FILE", session_file)
     monkeypatch.setattr(state_module, "CONFIG_DIR", config_dir)
     monkeypatch.setattr(state_module, "CONFIG_FILE", config_file)
     monkeypatch.setattr(state_module, "SESSION_FILE", session_file)
-    monkeypatch.setattr(state_module, "HOLIDAYS_FILE", holidays_file)
 
     return {"session_file": session_file}
 
