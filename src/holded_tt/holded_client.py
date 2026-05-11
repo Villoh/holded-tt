@@ -229,6 +229,7 @@ class HoldedClient:
         }
         if end is not None:
             data["end"] = end
+        # Holded employee-request endpoint requires multipart/form-data, not JSON
         response = self._post(
             "/internal/team/v2/employee-request",
             data=data,
