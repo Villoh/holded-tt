@@ -14,7 +14,7 @@ from holded_tt.console import get_output_console, render_error
 from holded_tt.dates import date_range, filter_holidays, filter_weekends, parse_date
 from holded_tt.errors import HoldedCliError, InputError
 from holded_tt.holded_client import HoldedClient
-from holded_tt.holidays import fetch_holidays, get_cached_holidays
+from holded_tt.timeoff import extract_workplace_holidays
 from holded_tt.state import AppState
 
 
@@ -460,27 +460,17 @@ def _resolve_holidays(
     workplace_id: str,
     dry_run: bool,
 ) -> frozenset[date]:
-    """Return the combined holiday set for the relevant years.
-
-    Uses cache when available. For a dry-run, falls back to an empty set
-    rather than failing if authentication is unavailable.
-    """
+    """Return the combined holiday set for the relevant years, fetched directly from API."""
     all_holidays: set[date] = set()
 
     for year in range(from_year, to_year + 1):
-        cached = get_cached_holidays(state.holidays_file, year)
-        if cached is not None:
-            all_holidays.update(cached)
+        if dry_run:
+            # Best-effort: skip holiday filtering rather than hard-fail
+            pass
         else:
-            if dry_run:
-                # Best-effort: skip holiday filtering rather than hard-fail
-                pass
-            else:
-                with HoldedClient(state.session_store) as client:
-                    fetched = fetch_holidays(
-                        client, state.holidays_file, year, workplace_id
-                    )
-                all_holidays.update(fetched)
+            with HoldedClient(state.session_store) as client:
+                summary = client.get_timeoff_summary(year)
+            all_holidays.update(extract_workplace_holidays(summary, year))
 
     return frozenset(all_holidays)
 
