@@ -51,11 +51,13 @@ def extract_workplace_holidays(summary: dict, year: int) -> dict[date, str]:
 
 
 def extract_employee_absences(summary: dict) -> list[dict]:
-    """Return all employee timeoffs from a timeoff-year-summary payload."""
-    entries = summary.get("employeeTimeOffs")
-    if not isinstance(entries, list):
-        return []
-    return entries
+    """Return all personal timeoffs from a timeoff-year-summary payload."""
+    result: list[dict] = []
+    for key in ("employeeTimeOffs", "cancelledTimeOffs", "declinedTimeOffs"):
+        entries = summary.get(key)
+        if isinstance(entries, list):
+            result.extend(entry for entry in entries if isinstance(entry, dict))
+    return result
 
 
 def resolve_vacation_type_id(summary: dict) -> str:

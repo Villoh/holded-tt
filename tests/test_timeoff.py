@@ -72,6 +72,20 @@ def test_extract_employee_absences_returns_employee_timeoffs() -> None:
     assert result[1]["id"] == "def"
 
 
+def test_extract_employee_absences_includes_cancelled_and_declined_timeoffs() -> None:
+    from holded_tt.timeoff import extract_employee_absences
+
+    summary = {
+        "employeeTimeOffs": [{"id": "accepted", "status": "accepted"}],
+        "cancelledTimeOffs": [{"id": "cancelled", "status": "cancelled"}],
+        "declinedTimeOffs": [{"id": "declined", "status": "declined"}],
+    }
+
+    result = extract_employee_absences(summary)
+
+    assert [entry["id"] for entry in result] == ["accepted", "cancelled", "declined"]
+
+
 def test_extract_employee_absences_returns_empty_list_when_missing() -> None:
     from holded_tt.timeoff import extract_employee_absences
 
