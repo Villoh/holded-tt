@@ -69,7 +69,6 @@ Files created there:
 
 - `config.toml`: saved CLI defaults
 - `session.json`: saved Holded cookies and `saved_at` timestamp
-- `holidays.json`: cached workplace holidays used by `track`
 
 `config.toml` is created automatically on first run if it does not exist. `session.json` permissions are restricted on a best-effort basis.
 
@@ -160,8 +159,7 @@ Notes:
 - `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`, `pause`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
-- `--dry-run` still uses `holidays.json` if that cache already exists.
-- `--dry-run` does not fetch missing holidays from Holded. If the holiday cache is missing, the preview falls back to no holiday filtering for those uncached years.
+- `--dry-run` does not fetch holidays from Holded. Preview mode skips live holiday filtering to avoid requiring a session just to inspect the date range.
 
 Subcommands:
 
@@ -201,6 +199,47 @@ Notes for `track show` and `track update`:
 - If `--start` or `--end` is omitted during `track update`, the CLI keeps the existing value from Holded.
 - If `--pause` is omitted during `track update`, the CLI keeps the existing pauses. If you pass `--pause`, it replaces the current pauses with the provided list.
 - Existing pauses are displayed in `track show` and update previews as `HH:MM -> HH:MM`.
+
+---
+
+### `holded-tt timeoff`
+Shows personal absences, workplace holidays, and vacation availability. It can also create, cancel, and inspect time-off requests.
+
+```bash
+# Show vacation availability, your absences, and workplace holidays
+holded-tt timeoff show
+
+# Show only your personal time-off requests
+holded-tt timeoff show --mine
+
+# Show only workplace holidays for the current year
+holded-tt timeoff show --holidays
+
+# Query a specific year
+holded-tt timeoff show --year 2026
+
+# Request a single vacation day
+holded-tt timeoff request --date 2026-06-15
+
+# Request a date range
+holded-tt timeoff request --from 2026-06-15 --to 2026-06-20
+
+# Request a half day
+holded-tt timeoff request --date 2026-06-15 --period morning
+holded-tt timeoff request --date 2026-06-15 --period afternoon
+
+# Cancel or inspect a request by ID
+holded-tt timeoff cancel --id <timeoff_id>
+holded-tt timeoff details --id <timeoff_id>
+```
+
+Notes:
+
+- `timeoff show` reads Holded's time-off year summary directly; no holiday cache is stored locally.
+- `--holidays` and `--mine` are mutually exclusive filters.
+- `timeoff request` accepts either `--date` for one day or `--from`/`--to` for a range.
+- Valid `--period` values are `full_day`, `morning`, and `afternoon`. The default is `full_day`.
+- Vacation requests use the first Holded time-off type that discounts days and requires approval.
 
 ---
 
