@@ -51,4 +51,6 @@ Thumbs.db
 # Planning
 .planning/
 .claude/
+.pi/
+.pi-lens/
 docs/superpowers/

@@ -18,9 +18,7 @@ _REQUIRED_DISCOVER_KEYS = frozenset({"topics", "token", "connectionToken", "wsUr
 @dataclass(slots=True)
 class LoginStep:
     two_factor_required: bool
-    masked_contact: str | None = (
-        None  # where the 2FA code was sent (e.g. "m***@domain.com")
-    )
+    masked_contact: str | None = None  # where the 2FA code was sent (e.g. "m***@domain.com")
 
 
 class MissingAuthenticationError(HoldedCliError):
@@ -28,14 +26,6 @@ class MissingAuthenticationError(HoldedCliError):
         super().__init__(
             message="No saved Holded session is available.",
             hint="Run `holded-tt login` to authenticate and save a new session.",
-        )
-
-
-class ExpiredAuthenticationError(HoldedCliError):
-    def __init__(self) -> None:
-        super().__init__(
-            message="The saved Holded session is too old to trust.",
-            hint="Run `holded-tt login` to refresh the saved session.",
         )
 
 
@@ -70,15 +60,11 @@ def describe_saved_session(session_store, now: datetime | None = None) -> str:
     return "unknown"
 
 
-def require_saved_session(session_store, now: datetime | None = None) -> dict[str, str]:
+def require_saved_session(session_store) -> dict[str, str]:
     state = session_store.load()
     cookies = state.get("cookies")
     if not isinstance(cookies, dict) or not cookies:
         raise MissingAuthenticationError()
-
-    status = describe_saved_session(session_store, now=now)
-    if status == "unknown":
-        raise ExpiredAuthenticationError()
 
     return {str(key): str(value) for key, value in cookies.items()}
 

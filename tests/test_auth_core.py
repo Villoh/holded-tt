@@ -70,23 +70,6 @@ def test_require_saved_session_raises_missing_auth_with_login_hint() -> None:
     assert "holded-tt login" in exc_info.value.hint
 
 
-def test_require_saved_session_raises_expired_auth_with_login_hint() -> None:
-    from holded_tt.auth import ExpiredAuthenticationError, require_saved_session
-
-    store = DummySessionStore(
-        cookies={"hat": "token"},
-        saved_at=_iso8601(datetime(2026, 2, 1, 12, 0, tzinfo=UTC)),
-    )
-
-    with pytest.raises(ExpiredAuthenticationError) as exc_info:
-        require_saved_session(
-            store,
-            now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC),
-        )
-
-    assert "holded-tt login" in exc_info.value.hint
-
-
 def test_parse_saved_at_treats_naive_datetime_as_utc() -> None:
     from holded_tt.auth import _parse_saved_at
 
@@ -99,16 +82,15 @@ def test_parse_saved_at_treats_naive_datetime_as_utc() -> None:
     assert result.hour == 8
 
 
-def test_require_saved_session_returns_cookies_when_valid() -> None:
+def test_require_saved_session_returns_cookies_when_present() -> None:
     from holded_tt.auth import require_saved_session
 
-    now = datetime(2026, 4, 12, 12, 0, tzinfo=UTC)
     store = DummySessionStore(
         cookies={"hat": "token", "PHPSESSID": "abc"},
-        saved_at=_iso8601(now - timedelta(days=7)),
+        saved_at=None,
     )
 
-    result = require_saved_session(store, now=now)
+    result = require_saved_session(store)
 
     assert result == {"hat": "token", "PHPSESSID": "abc"}
 
@@ -169,9 +151,7 @@ def test_validate_saved_session_reports_active_when_discover_succeeds() -> None:
         ),
     ],
 )
-def test_validate_saved_session_maps_discover_failures_to_status(
-    response, expected: str
-) -> None:
+def test_validate_saved_session_maps_discover_failures_to_status(response, expected: str) -> None:
     from holded_tt.auth import validate_saved_session
 
     store = DummySessionStore(cookies={"hat": "token"}, saved_at=None)
@@ -205,9 +185,7 @@ def test_primary_login_normalizes_two_factor_requirement() -> None:
         result = client.primary_login("dweller@example.com", "s3cret")
 
     assert result.two_factor_required is True
-    assert (
-        result.masked_contact is None
-    )  # new flow: no token, server returns maskedContactMethod
+    assert result.masked_contact is None  # new flow: no token, server returns maskedContactMethod
 
 
 def test_primary_login_returns_masked_contact_when_present() -> None:
