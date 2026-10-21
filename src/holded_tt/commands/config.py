@@ -5,7 +5,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt.config import save_config
+from holded_tt.config import WEEKDAYS, save_config
 from holded_tt.commands.track import _validate_pause
 from holded_tt.console import get_output_console
 from holded_tt.errors import InputError
@@ -23,6 +23,7 @@ ALLOWED_CONFIG_KEYS = {
     "defaults.timezone": "timezone",
     "defaults.pause": "pause",
 }
+DAY_FIELDS = ("start", "end", "pause")
 
 
 def _get_state(ctx: typer.Context) -> AppState:
@@ -32,18 +33,30 @@ def _get_state(ctx: typer.Context) -> AppState:
     return state
 
 
+def _split_day_key(key: str) -> tuple[str, str] | None:
+    """Parse ``defaults.<day>.<field>`` (e.g. defaults.fri.end)."""
+    parts = key.split(".")
+    if len(parts) == 3 and parts[0] == "defaults":
+        if parts[1] in WEEKDAYS and parts[2] in DAY_FIELDS:
+            return parts[1], parts[2]
+    return None
+
+
 def _resolve_config_attr(key: str) -> str:
-    if key not in ALLOWED_CONFIG_KEYS:
+    if key not in ALLOWED_CONFIG_KEYS and _split_day_key(key) is None:
         allowed_keys = ", ".join(ALLOWED_CONFIG_KEYS)
         raise InputError(
             message=f"Unsupported config key: {key}",
-            hint=f"Choose one of: {allowed_keys}",
+            hint=(
+                f"Choose one of: {allowed_keys}, "
+                f"or defaults.<{'|'.join(WEEKDAYS)}>.<{'|'.join(DAY_FIELDS)}>"
+            ),
         )
-    return ALLOWED_CONFIG_KEYS[key]
+    return ALLOWED_CONFIG_KEYS.get(key, key)
 
 
 def _parse_config_value(key: str, value: str) -> str | list[str]:
-    if key != "defaults.pause":
+    if not key.endswith(".pause"):
         return value
 
     pauses = [item.strip() for item in value.split(",") if item.strip()]
@@ -65,6 +78,14 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("end", state.config.end)
     grid.add_row("timezone", state.config.timezone)
     grid.add_row("pause", ", ".join(state.config.pause) or "[dim]—[/dim]")
+    for day in WEEKDAYS:
+        for field_name, field_value in state.config.days.get(day, {}).items():
+            rendered = (
+                ", ".join(field_value)
+                if isinstance(field_value, list)
+                else field_value
+            )
+            grid.add_row(f"{day}.{field_name}", rendered or "[dim]none[/dim]")
     grid.add_row("", "")
     grid.add_row("[dim]config[/dim]", Text(str(state.config_file), style="dim"))
     grid.add_row("[dim]session[/dim]", Text(str(state.session_file), style="dim"))
@@ -87,7 +108,9 @@ def set_command(
             "  defaults.start          Work start time (HH:MM)\n\n"
             "  defaults.end            Work end time (HH:MM)\n\n"
             "  defaults.timezone       Timezone (e.g. Europe/Madrid)\n\n"
-            "  defaults.pause          Default pauses (comma-separated HH:MM-HH:MM)"
+            "  defaults.pause          Default pauses (comma-separated HH:MM-HH:MM)\n\n"
+            "  defaults.<day>.<field>  Per-weekday override. day: mon..sun,\n"
+            "                          field: start, end or pause"
         ),
     ),
     value: str = typer.Argument(..., help="New value to persist."),
@@ -103,13 +126,20 @@ def set_command(
       holded-tt config set defaults.timezone Europe/Madrid
 
       holded-tt config set defaults.pause 14:00-14:30,17:00-17:15
+
+      holded-tt config set defaults.fri.end 15:00
     """
 
     state = _get_state(ctx)
     config_attr = _resolve_config_attr(key)
     parsed_value = _parse_config_value(key, value)
 
-    setattr(state.config, config_attr, parsed_value)
+    day_key = _split_day_key(key)
+    if day_key:
+        day, field_name = day_key
+        state.config.days.setdefault(day, {})[field_name] = parsed_value
+    else:
+        setattr(state.config, config_attr, parsed_value)
     save_config(state.config)
 
     rendered_value = ", ".join(parsed_value) if isinstance(parsed_value, list) else parsed_value

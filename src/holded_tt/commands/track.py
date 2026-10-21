@@ -10,6 +10,7 @@ from rich import box as rich_box
 from rich.table import Table
 from rich.text import Text
 
+from holded_tt.config import WEEKDAYS
 from holded_tt.console import get_output_console, render_error
 from holded_tt.dates import date_range, filter_holidays, filter_weekends, parse_date
 from holded_tt.errors import HoldedCliError, InputError
@@ -535,13 +536,22 @@ def track_command(
     # --- Resolve effective options from config defaults ---
     config = state.config
     effective_workplace = workplace or config.workplace_id
-    effective_start = start or config.start
-    effective_end = end or config.end
-    configured_pauses = config.pause if isinstance(config.pause, list) else []
+    explicit_pauses = (
+        [_validate_pause(p) for p in pause] if pause is not None else None
+    )
 
-    # --- Validate pauses ---
-    raw_pauses = pause if pause is not None else configured_pauses
-    validated_pauses: list[str] = [_validate_pause(p) for p in raw_pauses]
+    def schedule_for(day: date) -> tuple[str, str, tuple[str, ...]]:
+        override = config.days.get(WEEKDAYS[day.weekday()], {})
+        pauses = (
+            explicit_pauses
+            if explicit_pauses is not None
+            else override.get("pause", config.pause)
+        )
+        return (
+            start or override.get("start") or config.start,
+            end or override.get("end") or config.end,
+            tuple(_validate_pause(p) for p in pauses),
+        )
 
     days = _resolve_track_days(
         state,
@@ -560,12 +570,19 @@ def track_command(
         raise typer.Exit(0)
 
     # --- Show context line + preview table ---
-    pauses_str = "  ·  pause " + ", ".join(validated_pauses) if validated_pauses else ""
-    context_parts = [f"{effective_start} → {effective_end}{pauses_str}"]
-    if effective_workplace:
-        context_parts.append(f"workplace {effective_workplace}")
+    groups: dict[tuple[str, str, tuple[str, ...]], list[date]] = {}
+    for d in days:
+        groups.setdefault(schedule_for(d), []).append(d)
+
     console.print()
-    console.print("[dim]" + "  ·  ".join(context_parts) + "[/dim]")
+    for (g_start, g_end, g_pauses), g_days in groups.items():
+        pauses_str = "  ·  pause " + ", ".join(g_pauses) if g_pauses else ""
+        context_parts = [f"{g_start} → {g_end}{pauses_str}"]
+        if effective_workplace:
+            context_parts.append(f"workplace {effective_workplace}")
+        if len(groups) > 1:
+            context_parts.append(f"{len(g_days)} day(s)")
+        console.print("[dim]" + "  ·  ".join(context_parts) + "[/dim]")
     console.print(_build_preview_table(days))
 
     if dry_run:
@@ -585,21 +602,26 @@ def track_command(
             raise typer.Abort()
 
     # --- Submit ---
-    payload = {
-        "workplaceId": effective_workplace,
-        "timezone": config.timezone,
-        "days": [d.isoformat() for d in days],
-        "start": effective_start,
-        "end": effective_end,
-        "pauses": _build_pauses(validated_pauses),
-    }
+    payloads = [
+        {
+            "workplaceId": effective_workplace,
+            "timezone": config.timezone,
+            "days": [d.isoformat() for d in g_days],
+            "start": g_start,
+            "end": g_end,
+            "pauses": _build_pauses(list(g_pauses)),
+        }
+        for (g_start, g_end, g_pauses), g_days in groups.items()
+    ]
 
     with HoldedClient(state.session_store) as client:
         console.print("[dim]Validating…[/dim]")
-        client.check_bulk_timetracking(payload)
+        for payload in payloads:
+            client.check_bulk_timetracking(payload)
 
         console.print("[dim]Submitting…[/dim]")
-        client.submit_bulk_timetracking(payload)
+        for payload in payloads:
+            client.submit_bulk_timetracking(payload)
 
     date_range_str = (
         f"{resolved_from.strftime('%d %b')} → {resolved_to.strftime('%d %b %Y')}"

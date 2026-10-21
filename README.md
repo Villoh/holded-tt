@@ -315,6 +315,16 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.end`           | Default work end time (HH:MM)      | `18:00`              |
 | `defaults.timezone`      | Timezone for submitted entries     | `Europe/Madrid`      |
 | `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
+| `defaults.<day>.<field>` | Per-weekday override (see below)   | `defaults.fri.end 15:00` |
+
+**Per-weekday overrides:** `<day>` is `mon`, `tue`, `wed`, `thu`, `fri`, `sat` or `sun`, and `<field>` is `start`, `end` or `pause`. Anything not overridden falls back to the base defaults. `track` sends one batch per distinct schedule, and explicit `--start`/`--end`/`--pause` flags apply to every day.
+
+```bash
+# Short Fridays: same start and pause, finish at 15:00
+holded-tt config set defaults.fri.end 15:00
+```
+
+Overrides are stored in `config.toml` as `[days.fri]` tables. To remove one, delete its entry from the file.
 
 ```bash
 holded-tt config set defaults.workplace_id <workplace_id>

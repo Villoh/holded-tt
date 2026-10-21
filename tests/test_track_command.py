@@ -404,7 +404,7 @@ def test_timezone_for_day_falls_back_to_utc_for_unknown_timezone(monkeypatch) ->
     monkeypatch.setattr(track_module, "ZoneInfo", raising_zoneinfo)
 
     assert (
-        track_module._timezone_for_day("Mars/Olympus", date(2026, 4, 7)) == timezone.utc
+        track_module._timezone_for_day("Mars/Olympus", date(2026, 4, 7)) == UTC
     )
 
 
@@ -517,7 +517,7 @@ def test_extract_pause_windows_and_format_tracker_time_handle_invalid_values(
     monkeypatch,
 ) -> None:
     track_module = importlib.import_module("holded_tt.commands.track")
-    monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: timezone.utc)
+    monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: UTC)
 
     pauses = track_module._extract_pause_windows(
         [
@@ -555,7 +555,7 @@ def test_render_trackers_table_formats_local_times_and_skips_broken_rows(
     monkeypatch,
 ) -> None:
     track_module = importlib.import_module("holded_tt.commands.track")
-    monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: timezone.utc)
+    monkeypatch.setattr(track_module, "_timezone_for_day", lambda *_: UTC)
 
     table = track_module._render_trackers_table(
         [
@@ -1592,3 +1592,27 @@ class TestTrackDateFlag:
 
         assert result.exit_code == 1
         assert "cannot be combined" in result.output
+
+
+def test_track_dry_run_uses_weekday_overrides(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    paths = _patch_runtime_files(tmp_path, monkeypatch)
+    _write_session(paths["session_file"])
+    (paths["config_dir"]).mkdir(parents=True, exist_ok=True)
+    (paths["config_dir"] / "config.toml").write_text(
+        'start = "08:30"\nend = "17:30"\npause = ["14:00-14:30"]\n'
+        '[days.fri]\nend = "15:00"\n',
+        encoding="utf-8",
+    )
+    cli_module = importlib.import_module("holded_tt.cli")
+
+    # 2026-04-06 Mon to 2026-04-10 Fri
+    result = runner.invoke(
+        cli_module.app,
+        ["track", "--from", "2026-04-06", "--to", "2026-04-10", "--dry-run"],
+    )
+
+    assert result.exit_code == 0
+    assert "08:30 → 17:30  ·  pause 14:00-14:30  ·  4 day(s)" in result.stdout
+    assert "08:30 → 15:00  ·  pause 14:00-14:30  ·  1 day(s)" in result.stdout
