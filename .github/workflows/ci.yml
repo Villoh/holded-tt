@@ -108,6 +108,22 @@ jobs:
           .package-venv/bin/holded-tt --help
           .package-venv/bin/holded-tt track --help
 
+  nix:
+    name: Nix build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Nix
+        uses: cachix/install-nix-action@v31.9.1
+
+      - name: Flake checks
+        run: nix flake check
+
+      - name: Build the package
+        run: nix build .#default --print-build-logs
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest

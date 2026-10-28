@@ -26,6 +26,15 @@ uv tool install holded-tt
 pip install holded-tt
 ```
 
+With Nix, the repository is a flake:
+
+```bash
+nix run github:Villoh/holded-tt -- --help
+```
+
+To install it declaratively, add it as an input and use `inputs.holded-tt.packages.${system}.default`.
+Its version reads `0+g<commit>` because a flake source has no git tags to take it from.
+
 After installation, you can check the global CLI version with:
 
 ```bash
