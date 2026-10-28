@@ -14,18 +14,13 @@
     in
     {
       packages = forAllSystems (pkgs: rec {
-        holded-tt = pkgs.python3Packages.buildPythonApplication (finalAttrs: {
+        holded-tt = pkgs.python3Packages.buildPythonApplication {
           pname = "holded-tt";
-          # hatch-vcs takes the version from git tags, which a flake source does not have, so it is
-          # written here. Raise it in the commit that is tagged: the CD workflow checks they match.
-          version = "1.3.1";
+          # One source of truth for the version: pyproject.toml.
+          version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).project.version;
           pyproject = true;
           src = ./.;
-          env.SETUPTOOLS_SCM_PRETEND_VERSION = finalAttrs.version;
-          build-system = with pkgs.python3Packages; [
-            hatchling
-            hatch-vcs
-          ];
+          build-system = [ pkgs.python3Packages.hatchling ];
           dependencies = with pkgs.python3Packages; [
             typer
             httpx
@@ -43,7 +38,7 @@
           preCheck = "export HOME=$(mktemp -d)";
           pythonImportsCheck = [ "holded_tt" ];
           meta.mainProgram = "holded-tt";
-        });
+        };
         default = holded-tt;
       });
     };
