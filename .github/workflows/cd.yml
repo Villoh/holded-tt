@@ -30,6 +30,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6.0.2
 
+      - name: Check the flake version matches the tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: grep -q "version = \"${TAG#v}\";" flake.nix || { echo "flake.nix version is not ${TAG#v}" >&2; exit 1; }
+
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
         with:
