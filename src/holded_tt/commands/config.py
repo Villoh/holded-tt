@@ -23,7 +23,9 @@ ALLOWED_CONFIG_KEYS = {
     "defaults.timezone": "timezone",
     "defaults.pause": "pause",
     "defaults.jitter": "jitter",
+    "defaults.max_late": "max_late",
 }
+INT_KEYS = {"defaults.jitter", "defaults.max_late"}
 DAY_FIELDS = ("start", "end", "pause")
 
 
@@ -57,11 +59,11 @@ def _resolve_config_attr(key: str) -> str:
 
 
 def _parse_config_value(key: str, value: str) -> str | int | list[str]:
-    if key == "defaults.jitter":
+    if key in INT_KEYS:
         if not value.isdigit():
             raise InputError(
-                message=f"jitter must be a non-negative integer, got: {value!r}",
-                hint="Use minutes, e.g. `holded-tt config set defaults.jitter 15`.",
+                message=f"{key} must be a non-negative integer, got: {value!r}",
+                hint=f"Use minutes, e.g. `holded-tt config set {key} 15`.",
             )
         return int(value)
     if not key.endswith(".pause"):
@@ -86,6 +88,7 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("end", state.config.end)
     grid.add_row("timezone", state.config.timezone)
     grid.add_row("jitter", f"{state.config.jitter} min")
+    grid.add_row("max_late", f"{state.config.max_late} min")
     grid.add_row("pause", ", ".join(state.config.pause) or "[dim]—[/dim]")
     for day in WEEKDAYS:
         for field_name, field_value in state.config.days.get(day, {}).items():
@@ -119,6 +122,7 @@ def set_command(
             "  defaults.timezone       Timezone (e.g. Europe/Madrid)\n\n"
             "  defaults.pause          Default pauses (comma-separated HH:MM-HH:MM)\n\n"
             "  defaults.jitter         Max random minutes on start/end/pause (0 = off)\n\n"
+            "  defaults.max_late       `clock tick` skips a clock-in later than this (minutes)\n\n"
             "  defaults.<day>.<field>  Per-weekday override. day: mon..sun,\n"
             "                          field: start, end or pause"
         ),
