@@ -315,7 +315,7 @@ StartLimitIntervalSec=1h
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/holded-tt clock tick --schedule   # use the path from `which holded-tt`
+ExecStart=%h/.local/bin/holded-tt clock tick --schedule   # the path from `which holded-tt`, see below
 Restart=on-failure
 RestartSec=120
 RestartPreventExitStatus=3
@@ -351,13 +351,19 @@ Type=oneshot
 ExecStart=notify-send "holded-tt" "clock tick failed, see: journalctl --user -u 'holded-tt-*'"
 ```
 
+The path in `ExecStart` is also the one every armed timer reuses, so give it a path that survives updates. On NixOS use the profile path (`/etc/profiles/per-user/<user>/bin/holded-tt`), not the `/nix/store/...` one, which changes with every rebuild and is removed by garbage collection.
+
 ```bash
+holded-tt clock tick --schedule --dry-run    # first: today's plan and the next event, changing nothing
 systemctl --user daemon-reload
-systemctl --user enable --now holded-tt-tick.timer holded-tt-tick.service
-loginctl enable-linger $USER                 # run without an open login session
+systemctl --user enable --now holded-tt-tick.timer
+systemctl --user enable holded-tt-tick.service   # no --now: starting it runs a real tick immediately
+loginctl enable-linger $USER                 # optional: run without an open login session
 systemctl --user list-timers                 # the armed next event shows as holded-tt-next-*
 journalctl --user -u 'holded-tt-*' -n 30
 ```
+
+`enable --now` on the timer only waits for 06:00. Starting `holded-tt-tick.service` (or rebooting) does a real tick: it plans today and, if a clock-in is already due and within `max_late`, clocks in.
 
 Why two entry points besides the chain: `Persistent=true` runs the morning plan right after boot if the machine was off at 06:00, and the `default.target` hook re-arms the chain after a reboot, because one-shot timers do not survive one. If you suspend the machine, a timer that came due while asleep runs when it wakes.
 
