@@ -19,6 +19,8 @@ class AppConfig:
     timezone: str = "Europe/Paris"
     # Max random minutes of jitter per day on start/end/pause. 0 = deterministic.
     jitter: int = 0
+    # `clock tick`: skip today's clock-in if it is more than this many minutes late.
+    max_late: int = 90
     pause: list[str] = field(default_factory=list)
     # Per-weekday overrides, e.g. {"fri": {"end": "15:00"}}; unset fields use the base.
     days: dict[str, dict[str, str | list[str]]] = field(default_factory=dict)

@@ -1,5 +1,5 @@
-from holded_tt.commands.track import _hhmm_to_minutes as mins
-from holded_tt.commands.track import _jitter_schedule
+from holded_tt.schedule import hhmm_to_minutes as mins
+from holded_tt.schedule import jitter_schedule as _jitter_schedule
 
 
 def _net(start, end, pauses):

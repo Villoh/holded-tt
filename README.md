@@ -274,6 +274,76 @@ holded-tt clock resume
 
 `holded-tt clock` without a subcommand behaves like a status check.
 
+#### Automatic clocking (`clock tick`)
+
+`holded-tt clock tick` advances today's plan once and is meant to be run by a timer every few minutes. On its first run of the day it plans the day from your config (start, end, pauses, per-weekday overrides) with `defaults.jitter` applied, saves the plan to `plan.json` next to `config.toml`, and from then on clocks in, pauses, resumes and clocks out as each time comes due.
+
+```bash
+holded-tt config set defaults.jitter 15      # optional randomness, see `config`
+holded-tt config set defaults.max_late 90    # skip a clock-in later than this (default 90)
+holded-tt clock tick --dry-run               # show what would happen, change nothing
+```
+
+How it behaves:
+
+- **Skips** weekends, workplace holidays and accepted time off, without touching the tracker.
+- **Quiet:** with nothing due it prints nothing and makes no API call.
+- **Resilient:** every step checks the real tracker in Holded first, so a missed run, a reboot or a tracker you started by hand never causes a duplicate. If you clock in by hand, the plan adopts your real start time.
+- **Net hours hold:** a late clock-in (machine switched on late) or a late resume pushes the clock-out back by the same amount, so the day never nets less than the configured hours. Within `max_late` this holds for any jitter.
+- **Too late:** if the clock-in is more than `max_late` minutes after plan, the day is dropped, `tick` exits with code 2 once, and the rest of the plan is cancelled. Clock in by hand if you still want the day.
+- **A tracker left open from a previous day** blocks `tick` (exit 2) until you close it.
+- Clock-out is never skipped: if you were away at the planned time it happens at the next tick.
+
+`tick` only works while the machine is on and the session is valid (`holded-tt session`); when the session expires you need to `holded-tt login` again (2FA).
+
+**Linux (systemd user timer)** — `~/.config/systemd/user/holded-tt-tick.service`:
+
+```ini
+[Unit]
+Description=holded-tt clock tick
+OnFailure=holded-tt-failed.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/holded-tt clock tick   # use the path from `which holded-tt`
+```
+
+`holded-tt-tick.timer`:
+
+```ini
+[Unit]
+Description=Run holded-tt clock tick every 5 minutes on weekdays
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 06..20:00/5:00
+Persistent=true
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+```
+
+`holded-tt-failed.service` runs when a tick fails (expired session, missed clock-in). For example:
+
+```ini
+[Unit]
+Description=holded-tt tick failed
+
+[Service]
+Type=oneshot
+ExecStart=notify-send "holded-tt" "clock tick failed, see: journalctl --user -u holded-tt-tick"
+```
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now holded-tt-tick.timer
+loginctl enable-linger $USER                 # run without an open login session
+systemctl --user list-timers holded-tt-tick.timer
+journalctl --user -u holded-tt-tick -n 30
+```
+
+`Persistent=true` makes systemd run a tick right after boot if the machine was off at a scheduled time, which is what recovers a late start. On macOS use a `launchd` agent with `StartInterval`, on Windows a Task Scheduler task that repeats every 5 minutes; both just run `holded-tt clock tick`.
+
 ---
 
 ### `holded-tt export`
@@ -316,6 +386,7 @@ Actual built-in defaults used when `config.toml` is first created:
 - `defaults.timezone`: `Europe/Paris`
 - `defaults.pause`: empty list (`[]`)
 - `defaults.jitter`: `0` (no randomisation)
+- `defaults.max_late`: `90` (minutes; used by `clock tick`)
 
 Examples below are sample values you may want to change, not the shipped defaults.
 
@@ -329,6 +400,7 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.timezone`      | Timezone for submitted entries     | `Europe/Madrid`      |
 | `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
 | `defaults.jitter`        | Max random minutes on start/end/pause, `0` = off | `15`   |
+| `defaults.max_late`      | `clock tick` skips a clock-in later than this (minutes) | `90` |
 | `defaults.<day>.<field>` | Per-weekday override (see below)   | `defaults.fri.end 15:00` |
 
 **Per-weekday overrides:** `<day>` is `mon`, `tue`, `wed`, `thu`, `fri`, `sat` or `sun`, and `<field>` is `start`, `end` or `pause`. Anything not overridden falls back to the base defaults. `track` sends one batch per distinct schedule, and explicit `--start`/`--end`/`--pause` flags apply to every day.

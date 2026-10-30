@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional, cast
@@ -11,7 +10,8 @@ from rich import box as rich_box
 from rich.table import Table
 from rich.text import Text
 
-from holded_tt.config import WEEKDAYS
+from holded_tt.schedule import day_schedule, jitter_schedule
+from holded_tt.schedule import hhmm_to_minutes as _hhmm_to_minutes  # noqa: F401
 from holded_tt.console import get_output_console, render_error
 from holded_tt.dates import date_range, filter_holidays, filter_weekends, parse_date
 from holded_tt.errors import HoldedCliError, InputError
@@ -75,38 +75,6 @@ def _validate_pause(value: str) -> str:
     if start_str >= end_str:
         raise typer.BadParameter(f"Pause start must be before end: {value!r}")
     return value
-
-
-def _hhmm_to_minutes(t: str) -> int:
-    h, m = map(int, t.split(":"))
-    return h * 60 + m
-
-
-def _fmt_minutes(m: int) -> str:
-    return f"{m // 60:02d}:{m % 60:02d}"
-
-
-def _jitter_schedule(
-    start: str, end: str, pauses: tuple[str, ...], max_minutes: int
-) -> tuple[str, str, tuple[str, ...]]:
-    """Randomise a day by up to ``max_minutes``, never shortening net hours.
-
-    Start moves +-N; end follows the same shift (same duration) plus 0..N extra.
-    Pauses shift +-N as a block, kept inside the new day, so net >= configured.
-    """
-    s, e = _hhmm_to_minutes(start), _hhmm_to_minutes(end)
-    new_end = min(e + random.randint(-max_minutes, max_minutes) + random.randint(0, max_minutes), 23 * 60 + 59)
-    new_start = max(min(s + random.randint(-max_minutes, max_minutes), new_end - (e - s)), 0)
-    new_end = max(new_end, new_start + (e - s))
-    windows = [tuple(map(_hhmm_to_minutes, p.split("-"))) for p in pauses]
-    lo = max(-max_minutes, new_start - min((a for a, _ in windows), default=new_start))
-    hi = min(max_minutes, new_end - max((b for _, b in windows), default=new_end))
-    shift = random.randint(lo, hi) if lo <= hi else 0
-    return (
-        _fmt_minutes(new_start),
-        _fmt_minutes(new_end),
-        tuple(f"{_fmt_minutes(a + shift)}-{_fmt_minutes(b + shift)}" for a, b in windows),
-    )
 
 
 def _build_pauses(pauses: list[str]) -> list[dict]:
@@ -562,19 +530,10 @@ def track_command(
     )
 
     def schedule_for(day: date) -> tuple[str, str, tuple[str, ...]]:
-        override = config.days.get(WEEKDAYS[day.weekday()], {})
-        pauses = (
-            explicit_pauses
-            if explicit_pauses is not None
-            else override.get("pause", config.pause)
-        )
-        sched = (
-            str(start or override.get("start") or config.start),
-            str(end or override.get("end") or config.end),
-            tuple(_validate_pause(p) for p in pauses),
-        )
+        s, e, pauses = day_schedule(config, day, start, end, explicit_pauses)
+        sched = (s, e, tuple(_validate_pause(p) for p in pauses))
         max_jitter = config.jitter if jitter is None else jitter
-        return _jitter_schedule(*sched, max_jitter) if max_jitter else sched
+        return jitter_schedule(*sched, max_jitter) if max_jitter else sched
 
     days = _resolve_track_days(
         state,

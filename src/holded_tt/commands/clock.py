@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import typer
 from rich.text import Text
 
-from holded_tt.console import get_output_console
-from holded_tt.errors import InputError
+from holded_tt.autoclock import run_tick
+from holded_tt.commands.track import _timezone_for_day
+from holded_tt.console import get_output_console, render_error
+from holded_tt.errors import HoldedCliError, InputError
 from holded_tt.holded_client import HoldedClient
 from holded_tt.state import AppState
 
@@ -184,6 +186,33 @@ def resume_command(ctx: typer.Context) -> None:
     line.append("✓  Resumed", style="green bold")
     line.append(f"{duration_str}", style="dim")
     console.print(line)
+
+
+@app.command("tick")
+def tick_command(
+    ctx: typer.Context,
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would happen without clocking or saving."
+    ),
+) -> None:
+    """Advance today's automatic clocking plan once. Run it from a timer.
+
+    Plans the day (with jitter) on the first run, then clocks in, pauses,
+    resumes and clocks out as each time comes due. Weekends, holidays and
+    accepted time off are skipped. Safe to run every few minutes.
+    """
+    state = _get_state(ctx)
+    now = datetime.now(_timezone_for_day(state.config.timezone, date.today()))
+    try:
+        with HoldedClient(state.session_store) as client:
+            lines = run_tick(
+                state.config, state.config_dir / "plan.json", client, now, dry_run
+            )
+    except HoldedCliError as error:
+        render_error(error)
+        raise typer.Exit(code=error.exit_code) from None
+    for line in lines:
+        typer.echo(f"{now:%Y-%m-%d %H:%M}  {line}")
 
 
 @app.command("status")
