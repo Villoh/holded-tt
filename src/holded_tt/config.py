@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
+import sys
 import tomllib
 
 import tomli_w
@@ -42,7 +43,16 @@ def load_config() -> AppConfig:
         else []
     )
 
-    return AppConfig(**data)
+    # Keys this version does not know (written by a newer one, or a typo) must not crash
+    # every command: ignore them and say so. Saving the config drops them.
+    known = {f.name for f in fields(AppConfig)}
+    unknown = sorted(set(data) - known)
+    if unknown:
+        print(
+            f"warning: ignoring unknown key(s) in {CONFIG_FILE}: {', '.join(unknown)}",
+            file=sys.stderr,
+        )
+    return AppConfig(**{k: v for k, v in data.items() if k in known})
 
 
 def save_config(config: AppConfig) -> None:
