@@ -9,14 +9,20 @@ resume after a reboot: every step checks what Holded says before acting.
 from __future__ import annotations
 
 import json
+import os
+import random
+import shutil
+import subprocess
+import sys
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError
+from holded_tt.exit_codes import EXIT_NO_RETRY
 from holded_tt.schedule import (
     day_schedule,
     fmt_minutes,
@@ -26,6 +32,18 @@ from holded_tt.schedule import (
 from holded_tt.timeoff import extract_employee_absences, extract_workplace_holidays
 
 _NEVER = 10**6
+
+# Applied to each one-shot timer that `--schedule` arms: systemd retries a failed tick
+# every 2 minutes (15 attempts), skips the retry for exit code 3, and runs the alert
+# unit on failure (see README; rate-limit that unit to be alerted once).
+RETRY_PROPERTIES = (
+    "Restart=on-failure",
+    "RestartSec=120",
+    f"RestartPreventExitStatus={EXIT_NO_RETRY}",
+    "StartLimitBurst=15",
+    "StartLimitIntervalSec=1h",
+    "OnFailure=holded-tt-failed.service",
+)
 
 
 @dataclass
@@ -94,6 +112,66 @@ def _next_due(plan: Plan) -> int:
         times += [a] if f"p{i}" not in plan.done else []
         times += [b] if f"r{i}" not in plan.done else []
     return min(times + [plan.out_at])
+
+
+def next_event(plan: Plan) -> int | None:
+    """Minute of the next pending event, or None when the plan has nothing left."""
+    due = _next_due(plan)
+    return None if due == _NEVER else due
+
+
+def executable() -> str:
+    """Path the scheduled timers should run: how we were started, else PATH."""
+    argv0 = os.path.abspath(sys.argv[0])
+    if os.path.basename(argv0) == "holded-tt":
+        return argv0
+    found = shutil.which("holded-tt")
+    if found is None:
+        raise HoldedCliError(
+            message="Cannot find the holded-tt executable to schedule.",
+            hint="Put holded-tt on PATH, or start it by its full path.",
+            exit_code=EXIT_NO_RETRY,
+        )
+    return found
+
+
+def arm_next(
+    plan: Plan, now: datetime, exe: str, run: Callable[..., Any] = subprocess.run
+) -> datetime | None:
+    """Arm a one-shot systemd timer that runs `clock tick` at the next planned event.
+
+    Nothing stays running in between. The seconds are random but fixed per event, so
+    arming the same event twice (a retry) reuses one unit instead of firing twice.
+    """
+    minute = next_event(plan)
+    if minute is None:
+        return None
+    second = random.Random(f"{plan.date}-{minute}").randrange(60)
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    when = max(midnight + timedelta(minutes=minute, seconds=second), now + timedelta(seconds=5))
+    utc = when.astimezone(timezone.utc)
+    command = [
+        "systemd-run", "--user", "--quiet", "--collect",
+        f"--unit=holded-tt-next-{utc:%Y%m%dT%H%M%S}",
+        f"--on-calendar={utc:%Y-%m-%d %H:%M:%S} UTC",
+        "--timer-property=AccuracySec=1s",
+        *[f"--property={p}" for p in RETRY_PROPERTIES],
+        "--", exe, "clock", "tick", "--schedule",
+    ]
+    try:
+        done = run(command, capture_output=True, text=True)
+    except FileNotFoundError:
+        raise HoldedCliError(
+            message="systemd-run not found: --schedule needs systemd (Linux).",
+            hint="Run `holded-tt clock tick` from a periodic timer instead, without --schedule.",
+            exit_code=EXIT_NO_RETRY,
+        ) from None
+    if done.returncode and "already" not in done.stderr:  # "already loaded" = armed before
+        raise HoldedCliError(
+            message="Could not schedule the next clock event.",
+            hint=done.stderr.strip() or f"systemd-run exited with {done.returncode}.",
+        )
+    return when
 
 
 def step(plan: Plan, now: int, tracker: Tracker, max_late: int) -> list[str]:
@@ -233,6 +311,7 @@ def run_tick(
         raise HoldedCliError(
             message=f"Missed today's clock-in: {plan.reason}.",
             hint="Clock in by hand with `holded-tt clock in`; the rest of today's plan is cancelled.",
+            exit_code=EXIT_NO_RETRY,
         )
     return out
 

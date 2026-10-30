@@ -6,7 +6,8 @@ from typing import Any
 import typer
 from rich.text import Text
 
-from holded_tt.autoclock import run_tick
+from holded_tt.autoclock import arm_next, executable, load_plan, next_event, run_tick
+from holded_tt.schedule import fmt_minutes
 from holded_tt.commands.track import _timezone_for_day
 from holded_tt.console import get_output_console, render_error
 from holded_tt.errors import HoldedCliError, InputError
@@ -194,20 +195,34 @@ def tick_command(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would happen without clocking or saving."
     ),
+    schedule: bool = typer.Option(
+        False,
+        "--schedule",
+        help="Then arm a one-shot systemd timer for the next event (Linux), so nothing runs in between.",
+    ),
 ) -> None:
-    """Advance today's automatic clocking plan once. Run it from a timer.
+    """Advance today's automatic clocking plan once.
 
     Plans the day (with jitter) on the first run, then clocks in, pauses,
     resumes and clocks out as each time comes due. Weekends, holidays and
-    accepted time off are skipped. Safe to run every few minutes.
+    accepted time off are skipped. Run it from a periodic timer, or with
+    --schedule from a daily timer and let each run arm the next event.
     """
     state = _get_state(ctx)
+    plan_file = state.config_dir / "plan.json"
     now = datetime.now(_timezone_for_day(state.config.timezone, date.today()))
     try:
         with HoldedClient(state.session_store) as client:
-            lines = run_tick(
-                state.config, state.config_dir / "plan.json", client, now, dry_run
-            )
+            lines = run_tick(state.config, plan_file, client, now, dry_run)
+        plan = load_plan(plan_file) if schedule else None
+        if plan is not None and dry_run:
+            nxt = next_event(plan)
+            if nxt is not None:
+                lines.append(f"would arm next event at {fmt_minutes(nxt)}")
+        elif plan is not None:
+            when = arm_next(plan, now, executable())
+            if when is not None:
+                lines.append(f"next event armed for {when:%H:%M:%S}")
     except HoldedCliError as error:
         render_error(error)
         raise typer.Exit(code=error.exit_code) from None

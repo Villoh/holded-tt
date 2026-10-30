@@ -276,12 +276,18 @@ holded-tt clock resume
 
 #### Automatic clocking (`clock tick`)
 
-`holded-tt clock tick` advances today's plan once and is meant to be run by a timer every few minutes. On its first run of the day it plans the day from your config (start, end, pauses, per-weekday overrides) with `defaults.jitter` applied, saves the plan to `plan.json` next to `config.toml`, and from then on clocks in, pauses, resumes and clocks out as each time comes due.
+`holded-tt clock tick` advances today's plan once. On its first run of the day it plans the day from your config (start, end, pauses, per-weekday overrides) with `defaults.jitter` applied, saves the plan to `plan.json` next to `config.toml`, and from then on clocks in, pauses, resumes and clocks out as each time comes due.
+
+Two ways to run it:
+
+- **Linux, event-driven (recommended):** `clock tick --schedule` runs once a day (and at boot); after acting it arms a one-shot systemd timer for the **next** planned event and exits. Nothing runs or sleeps in between: about 5 runs a day, each at the planned second (random seconds per event, so entries are not always at `:00`).
+- **Any OS, periodic:** run `clock tick` (without `--schedule`) from a timer every 5 minutes. It does nothing and calls nothing until something is due, but entries then land on the 5-minute grid.
 
 ```bash
 holded-tt config set defaults.jitter 15      # optional randomness, see `config`
 holded-tt config set defaults.max_late 90    # skip a clock-in later than this (default 90)
 holded-tt clock tick --dry-run               # show what would happen, change nothing
+holded-tt clock tick --schedule --dry-run    # ...and when the next event would be armed
 ```
 
 How it behaves:
@@ -290,59 +296,72 @@ How it behaves:
 - **Quiet:** with nothing due it prints nothing and makes no API call.
 - **Resilient:** every step checks the real tracker in Holded first, so a missed run, a reboot or a tracker you started by hand never causes a duplicate. If you clock in by hand, the plan adopts your real start time.
 - **Net hours hold:** a late clock-in (machine switched on late) or a late resume pushes the clock-out back by the same amount, so the day never nets less than the configured hours. Within `max_late` this holds for any jitter.
-- **Too late:** if the clock-in is more than `max_late` minutes after plan, the day is dropped, `tick` exits with code 2 once, and the rest of the plan is cancelled. Clock in by hand if you still want the day.
+- **Too late:** if the clock-in is more than `max_late` minutes after plan, the day is dropped, `tick` exits with code 3 once, and the rest of the plan is cancelled. Clock in by hand if you still want the day.
 - **A tracker left open from a previous day** blocks `tick` (exit 2) until you close it.
-- Clock-out is never skipped: if you were away at the planned time it happens at the next tick.
+- Clock-out is never skipped: if you were away at the planned time it happens as soon as `tick` runs again.
+
+**Failures and retries.** With `--schedule` nothing polls, so a failed run must not break the chain. Exit code 2 (network error, expired session, systemd error) is retried by systemd every 2 minutes for about 30 minutes; code 3 (missed clock-in, no `systemd-run`, executable not found) is not, because retrying cannot fix it. Every failed attempt runs `holded-tt-failed.service`; rate-limit it (below) so you are alerted once. After an expired session, `holded-tt login` is enough: the next retry carries on. If a run is killed before it can arm the next event, the chain stops until the next daily or boot run, and the alert is how you find out.
 
 `tick` only works while the machine is on and the session is valid (`holded-tt session`); when the session expires you need to `holded-tt login` again (2FA).
 
-**Linux (systemd user timer)** — `~/.config/systemd/user/holded-tt-tick.service`:
+**Linux (systemd user units).** `~/.config/systemd/user/holded-tt-tick.service` (the retry lines also apply to every timer it arms):
 
 ```ini
 [Unit]
 Description=holded-tt clock tick
 OnFailure=holded-tt-failed.service
+StartLimitBurst=15
+StartLimitIntervalSec=1h
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/holded-tt clock tick   # use the path from `which holded-tt`
+ExecStart=%h/.local/bin/holded-tt clock tick --schedule   # use the path from `which holded-tt`
+Restart=on-failure
+RestartSec=120
+RestartPreventExitStatus=3
+
+[Install]
+WantedBy=default.target    # also run it when your user manager starts (boot/login)
 ```
 
-`holded-tt-tick.timer`:
+`holded-tt-tick.timer` plans the day once, every weekday morning:
 
 ```ini
 [Unit]
-Description=Run holded-tt clock tick every 5 minutes on weekdays
+Description=Plan the holded-tt day
 
 [Timer]
-OnCalendar=Mon..Fri *-*-* 06..20:00/5:00
+OnCalendar=Mon..Fri *-*-* 06:00:00
 Persistent=true
-AccuracySec=30s
 
 [Install]
 WantedBy=timers.target
 ```
 
-`holded-tt-failed.service` runs when a tick fails (expired session, missed clock-in). For example:
+`holded-tt-failed.service` runs on a failed attempt; the start limit makes it alert once an hour:
 
 ```ini
 [Unit]
 Description=holded-tt tick failed
+StartLimitBurst=1
+StartLimitIntervalSec=1h
 
 [Service]
 Type=oneshot
-ExecStart=notify-send "holded-tt" "clock tick failed, see: journalctl --user -u holded-tt-tick"
+ExecStart=notify-send "holded-tt" "clock tick failed, see: journalctl --user -u 'holded-tt-*'"
 ```
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable --now holded-tt-tick.timer
+systemctl --user enable --now holded-tt-tick.timer holded-tt-tick.service
 loginctl enable-linger $USER                 # run without an open login session
-systemctl --user list-timers holded-tt-tick.timer
-journalctl --user -u holded-tt-tick -n 30
+systemctl --user list-timers                 # the armed next event shows as holded-tt-next-*
+journalctl --user -u 'holded-tt-*' -n 30
 ```
 
-`Persistent=true` makes systemd run a tick right after boot if the machine was off at a scheduled time, which is what recovers a late start. On macOS use a `launchd` agent with `StartInterval`, on Windows a Task Scheduler task that repeats every 5 minutes; both just run `holded-tt clock tick`.
+Why two entry points besides the chain: `Persistent=true` runs the morning plan right after boot if the machine was off at 06:00, and the `default.target` hook re-arms the chain after a reboot, because one-shot timers do not survive one. If you suspend the machine, a timer that came due while asleep runs when it wakes.
+
+**macOS / Windows.** `--schedule` needs `systemd-run`. Use a `launchd` agent with `StartInterval=300`, or a Task Scheduler task repeating every 5 minutes, running `holded-tt clock tick`.
 
 ---
 

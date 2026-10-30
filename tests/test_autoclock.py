@@ -9,7 +9,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from holded_tt.autoclock import Plan, Tracker, build_plan, load_plan, run_tick, step
+from holded_tt.autoclock import (
+    Plan,
+    Tracker,
+    arm_next,
+    build_plan,
+    executable,
+    load_plan,
+    next_event,
+    run_tick,
+    step,
+)
 from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError
 
@@ -310,7 +320,7 @@ def test_too_late_misses_the_day_and_alerts_once(tmp_path) -> None:
 
     assert client.calls == []
     assert len(errors) == 1 and "Missed" in errors[0].message
-    assert errors[0].exit_code == 2  # makes the systemd unit fail
+    assert errors[0].exit_code == 3  # fails the unit, but systemd must not retry it
 
 
 def test_exactly_at_the_limit_still_clocks_in(tmp_path) -> None:
@@ -487,6 +497,25 @@ def test_tick_command_prints_timestamped_lines(runner, monkeypatch, tmp_path) ->
     assert seen == {"plan_file": tmp_path / "plan.json", "dry_run": True}
 
 
+def test_tick_command_schedule_arms_the_next_event(runner, monkeypatch, tmp_path) -> None:
+    clock = importlib.import_module("holded_tt.commands.clock")
+    cli = _cli(monkeypatch, tmp_path, lambda *_a, **_k: [])
+    (tmp_path / "plan.json").write_text(
+        '{"date": "2026-04-07", "in_at": 510, "out_at": 1050, "duration": 540, "pauses": [], "done": ["in"]}'
+    )
+    armed = {}
+    monkeypatch.setattr(clock, "executable", lambda: "/x/holded-tt")
+    monkeypatch.setattr(
+        clock, "arm_next", lambda plan, now, exe: armed.update(plan=plan, exe=exe) or now
+    )
+
+    result = runner.invoke(cli.app, ["clock", "tick", "--schedule"])
+
+    assert result.exit_code == 0
+    assert armed["exe"] == "/x/holded-tt" and armed["plan"].out_at == 1050
+    assert "next event armed" in result.stdout
+
+
 def test_tick_command_exits_2_when_the_tick_fails(runner, monkeypatch, tmp_path) -> None:
     def stub(*_a, **_k):
         raise HoldedCliError(message="Missed today's clock-in.", hint="Clock in by hand.")
@@ -497,6 +526,148 @@ def test_tick_command_exits_2_when_the_tick_fails(runner, monkeypatch, tmp_path)
 
     assert result.exit_code == 2
     assert "Missed today's clock-in." in result.output
+
+
+# ---------------------------------------------------------------------------
+# arm_next: one-shot systemd timer for the next event
+# ---------------------------------------------------------------------------
+
+
+class FakeRun:
+    def __init__(self, returncode: int = 0, stderr: str = "", raises: Exception | None = None):
+        self.calls: list[list[str]] = []
+        self.result = SimpleNamespace(returncode=returncode, stderr=stderr)
+        self.raises = raises
+
+    def __call__(self, command, **_kw):
+        self.calls.append(command)
+        if self.raises:
+            raise self.raises
+        return self.result
+
+
+def _arg(command: list[str], prefix: str) -> str:
+    return next(a for a in command if a.startswith(prefix))
+
+
+def test_arm_next_targets_the_next_pending_event() -> None:
+    plan = plan_for(done=["in"])
+    run = FakeRun()
+
+    when = arm_next(plan, at(TUE, hm("13:00")), "/x/holded-tt", run)
+
+    command = run.calls[0]
+    assert when is not None and when.date() == TUE
+    assert hm("14:00") * 60 <= (when - at(TUE, 0)).total_seconds() < hm("14:01") * 60  # pause, random seconds
+    assert _arg(command, "--on-calendar=").startswith("--on-calendar=2026-04-07 14:0")
+    assert command[:3] == ["systemd-run", "--user", "--quiet"]
+    assert command[-5:] == ["--", "/x/holded-tt", "clock", "tick", "--schedule"]
+
+
+def test_arm_next_arms_retry_properties_on_the_timer_service() -> None:
+    run = FakeRun()
+
+    arm_next(plan_for(done=["in"]), at(TUE, hm("13:00")), "holded-tt", run)
+
+    props = [a for a in run.calls[0] if a.startswith("--property=")]
+    assert "--property=Restart=on-failure" in props
+    assert "--property=RestartPreventExitStatus=3" in props  # no retry for a missed clock-in
+    assert "--property=OnFailure=holded-tt-failed.service" in props
+
+
+def test_arm_next_seconds_are_random_per_event_but_stable_for_the_same_event() -> None:
+    plan = plan_for(done=["in"])
+    seconds = set()
+    for day in range(1, 29):
+        p = plan_for(date=f"2026-04-{day:02d}", done=["in"])
+        armed = arm_next(p, at(date(2026, 4, day), hm("13:00")), "h", FakeRun())
+        assert armed is not None
+        seconds.add(armed.second)
+    assert len(seconds) > 10  # not always :00
+
+    first = arm_next(plan, at(TUE, hm("13:00")), "h", FakeRun())
+    again = arm_next(plan, at(TUE, hm("13:30")), "h", FakeRun())
+    assert first is not None and again is not None and first.second == again.second  # a retry reuses the unit
+
+
+def test_arm_next_never_arms_in_the_past() -> None:
+    plan = plan_for()  # clock-in was due at 08:30
+    run = FakeRun()
+    now = at(TUE, hm("09:00"))
+
+    when = arm_next(plan, now, "h", run)
+
+    assert when is not None and now < when <= now + timedelta(seconds=5)
+
+
+def test_arm_next_does_nothing_when_the_plan_is_finished_or_skipped() -> None:
+    run = FakeRun()
+
+    assert arm_next(plan_for(done=["in", "p0", "r0", "out"]), at(TUE, hm("18:00")), "h", run) is None
+    assert arm_next(Plan("2026-04-07", "skipped", "weekend"), at(TUE, 0), "h", run) is None
+    assert arm_next(plan_for(status="missed"), at(TUE, hm("11:00")), "h", run) is None
+    assert run.calls == [] and next_event(plan_for(done=["in"])) == hm("14:00")
+
+
+def test_arm_next_uses_utc_for_the_calendar_expression() -> None:
+    run = FakeRun()
+    madrid = timezone(timedelta(hours=2))
+    now = datetime(2026, 4, 7, 13, 0, tzinfo=madrid)
+
+    arm_next(plan_for(done=["in"]), now, "h", run)
+
+    assert _arg(run.calls[0], "--on-calendar=").endswith(" UTC")
+    assert "2026-04-07 12:0" in _arg(run.calls[0], "--on-calendar=")  # 14:00 +02:00 = 12:00 UTC
+
+
+def test_arm_next_tolerates_an_already_armed_unit_but_not_other_errors() -> None:
+    plan = plan_for(done=["in"])
+    now = at(TUE, hm("13:00"))
+
+    assert arm_next(plan, now, "h", FakeRun(1, "Unit x.timer was already loaded or has a fragment file.")) is not None
+    with pytest.raises(HoldedCliError, match="Could not schedule"):
+        arm_next(plan, now, "h", FakeRun(1, "Failed to connect to bus"))
+
+
+def test_arm_next_without_systemd_fails_without_retry() -> None:
+    with pytest.raises(HoldedCliError) as info:
+        arm_next(plan_for(done=["in"]), at(TUE, hm("13:00")), "h", FakeRun(raises=FileNotFoundError()))
+
+    assert info.value.exit_code == 3 and "periodic timer" in info.value.hint
+
+
+def test_executable_prefers_how_we_were_started(monkeypatch, tmp_path) -> None:
+    shim = tmp_path / "holded-tt"
+    monkeypatch.setattr("sys.argv", [str(shim), "clock", "tick"])
+
+    assert executable() == str(shim)
+
+    monkeypatch.setattr("sys.argv", ["python -m pytest"])
+    monkeypatch.setattr("shutil.which", lambda _n: None)
+    with pytest.raises(HoldedCliError, match="Cannot find"):
+        executable()
+
+
+def test_chain_of_events_follows_the_plan_through_a_whole_day(tmp_path) -> None:
+    """No polling: arm_next after each tick must visit in, pause, resume, out, then stop."""
+    client = FakeHolded()
+    plan_file = tmp_path / "plan.json"
+    visited: list[str] = []
+    when = at(TUE, hm("06:00"))
+
+    for _ in range(10):
+        client.minute = int((when - at(TUE, 0)).total_seconds() // 60)
+        run_tick(cfg(), plan_file, client, when)
+        plan = load_plan(plan_file)
+        assert plan is not None
+        nxt = arm_next(plan, when, "h", FakeRun())
+        if nxt is None:
+            break
+        visited.append(f"{nxt:%H:%M}")
+        when = nxt
+
+    assert [t[:5] for t in visited] == ["08:30", "14:00", "14:30", "17:30"]
+    assert client.worked == 8 * H + 30 and client.tracker is None
 
 
 def test_max_late_config_validation() -> None:
