@@ -23,6 +23,7 @@ from typing import Any
 from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError
 from holded_tt.exit_codes import EXIT_NO_RETRY
+from holded_tt.units import RETRY_PROPERTIES
 from holded_tt.schedule import (
     day_schedule,
     fmt_minutes,
@@ -32,18 +33,6 @@ from holded_tt.schedule import (
 from holded_tt.timeoff import extract_employee_absences, extract_workplace_holidays
 
 _NEVER = 10**6
-
-# Applied to each one-shot timer that `--schedule` arms: systemd retries a failed tick
-# every 2 minutes (15 attempts), skips the retry for exit code 3, and runs the alert
-# unit on failure (see README; rate-limit that unit to be alerted once).
-RETRY_PROPERTIES = (
-    "Restart=on-failure",
-    "RestartSec=120",
-    f"RestartPreventExitStatus={EXIT_NO_RETRY}",
-    "StartLimitBurst=15",
-    "StartLimitIntervalSec=1h",
-    "OnFailure=holded-tt-failed.service",
-)
 
 
 @dataclass
