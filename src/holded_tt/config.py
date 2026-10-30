@@ -17,6 +17,8 @@ class AppConfig:
     start: str = "08:30"
     end: str = "17:30"
     timezone: str = "Europe/Paris"
+    # Max random minutes of jitter per day on start/end/pause. 0 = deterministic.
+    jitter: int = 0
     pause: list[str] = field(default_factory=list)
     # Per-weekday overrides, e.g. {"fri": {"end": "15:00"}}; unset fields use the base.
     days: dict[str, dict[str, str | list[str]]] = field(default_factory=dict)

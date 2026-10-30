@@ -22,6 +22,7 @@ ALLOWED_CONFIG_KEYS = {
     "defaults.end": "end",
     "defaults.timezone": "timezone",
     "defaults.pause": "pause",
+    "defaults.jitter": "jitter",
 }
 DAY_FIELDS = ("start", "end", "pause")
 
@@ -55,7 +56,14 @@ def _resolve_config_attr(key: str) -> str:
     return ALLOWED_CONFIG_KEYS.get(key, key)
 
 
-def _parse_config_value(key: str, value: str) -> str | list[str]:
+def _parse_config_value(key: str, value: str) -> str | int | list[str]:
+    if key == "defaults.jitter":
+        if not value.isdigit():
+            raise InputError(
+                message=f"jitter must be a non-negative integer, got: {value!r}",
+                hint="Use minutes, e.g. `holded-tt config set defaults.jitter 15`.",
+            )
+        return int(value)
     if not key.endswith(".pause"):
         return value
 
@@ -77,6 +85,7 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("start", state.config.start)
     grid.add_row("end", state.config.end)
     grid.add_row("timezone", state.config.timezone)
+    grid.add_row("jitter", f"{state.config.jitter} min")
     grid.add_row("pause", ", ".join(state.config.pause) or "[dim]—[/dim]")
     for day in WEEKDAYS:
         for field_name, field_value in state.config.days.get(day, {}).items():
@@ -109,6 +118,7 @@ def set_command(
             "  defaults.end            Work end time (HH:MM)\n\n"
             "  defaults.timezone       Timezone (e.g. Europe/Madrid)\n\n"
             "  defaults.pause          Default pauses (comma-separated HH:MM-HH:MM)\n\n"
+            "  defaults.jitter         Max random minutes on start/end/pause (0 = off)\n\n"
             "  defaults.<day>.<field>  Per-weekday override. day: mon..sun,\n"
             "                          field: start, end or pause"
         ),
@@ -135,14 +145,16 @@ def set_command(
     parsed_value = _parse_config_value(key, value)
 
     day_key = _split_day_key(key)
-    if day_key:
+    if day_key and not isinstance(parsed_value, int):
         day, field_name = day_key
         state.config.days.setdefault(day, {})[field_name] = parsed_value
     else:
         setattr(state.config, config_attr, parsed_value)
     save_config(state.config)
 
-    rendered_value = ", ".join(parsed_value) if isinstance(parsed_value, list) else parsed_value
+    rendered_value = (
+        ", ".join(parsed_value) if isinstance(parsed_value, list) else str(parsed_value)
+    )
 
     line = Text()
     line.append("✓  ", style="green bold")

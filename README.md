@@ -159,6 +159,9 @@ holded-tt track --from 2026-04-01 --to 2026-04-30 \
 
 # Skip confirmation for large submissions
 holded-tt track --from 2026-01-01 --to 2026-12-31 --yes
+
+# Randomise start, end and pause by up to 20 minutes per day
+holded-tt track --from 2026-04-01 --to 2026-04-30 --jitter 20
 ```
 
 Notes:
@@ -167,6 +170,7 @@ Notes:
 - `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`, `pause`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
+- `--jitter N` (or `defaults.jitter`) randomises each day's start, end and pause by up to `N` minutes so entries are not identical every day. Start and end move in either direction, but net worked hours never drop below the configured schedule: a later start forces an equally later end. Pauses keep their length and stay inside the day. The override flag wins over the config value, and `--jitter 0` turns it off. Because every day gets its own schedule, `track` sends one batch per day when jitter is on.
 - `--dry-run` does not fetch holidays from Holded. Preview mode skips live holiday filtering to avoid requiring a session just to inspect the date range.
 
 Subcommands:
@@ -311,6 +315,7 @@ Actual built-in defaults used when `config.toml` is first created:
 - `defaults.end`: `17:30`
 - `defaults.timezone`: `Europe/Paris`
 - `defaults.pause`: empty list (`[]`)
+- `defaults.jitter`: `0` (no randomisation)
 
 Examples below are sample values you may want to change, not the shipped defaults.
 
@@ -323,6 +328,7 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.end`           | Default work end time (HH:MM)      | `18:00`              |
 | `defaults.timezone`      | Timezone for submitted entries     | `Europe/Madrid`      |
 | `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
+| `defaults.jitter`        | Max random minutes on start/end/pause, `0` = off | `15`   |
 | `defaults.<day>.<field>` | Per-weekday override (see below)   | `defaults.fri.end 15:00` |
 
 **Per-weekday overrides:** `<day>` is `mon`, `tue`, `wed`, `thu`, `fri`, `sat` or `sun`, and `<field>` is `start`, `end` or `pause`. Anything not overridden falls back to the base defaults. `track` sends one batch per distinct schedule, and explicit `--start`/`--end`/`--pause` flags apply to every day.
