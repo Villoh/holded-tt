@@ -63,5 +63,7 @@ Files created there:
 
 - `config.toml`: saved CLI defaults
 - `session.json`: saved Holded cookies and `saved_at` timestamp
+- `plan.json`: today's automatic clocking plan (see [Automatic clocking](automation.md))
+- `skips.json`: days you asked `clock skip` not to clock
 
 `config.toml` is created automatically on first run if it does not exist. `session.json` permissions are restricted on a best-effort basis.

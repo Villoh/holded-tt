@@ -484,8 +484,8 @@ def _cli(monkeypatch, tmp_path, run_tick_stub):
 def test_tick_command_prints_timestamped_lines(runner, monkeypatch, tmp_path) -> None:
     seen = {}
 
-    def stub(config, plan_file, client, now, dry_run):
-        seen.update(plan_file=plan_file, dry_run=dry_run)
+    def stub(config, plan_file, client, now, dry_run, skips):
+        seen.update(plan_file=plan_file, dry_run=dry_run, skips=skips)
         return ["in"]
 
     cli = _cli(monkeypatch, tmp_path, stub)
@@ -494,7 +494,7 @@ def test_tick_command_prints_timestamped_lines(runner, monkeypatch, tmp_path) ->
 
     assert result.exit_code == 0
     assert result.stdout.strip().endswith("in") and result.stdout[:4].isdigit()
-    assert seen == {"plan_file": tmp_path / "plan.json", "dry_run": True}
+    assert seen == {"plan_file": tmp_path / "plan.json", "dry_run": True, "skips": frozenset()}
 
 
 def test_tick_command_schedule_arms_the_next_event(runner, monkeypatch, tmp_path) -> None:

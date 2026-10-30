@@ -119,6 +119,12 @@ def _systemctl(run: Runner, *args: str, check: bool = True) -> None:
         )
 
 
+def disarm(run: Runner = subprocess.run) -> None:
+    """Stop every armed one-shot timer. Quietly does nothing where there is no systemd."""
+    if shutil.which("systemctl") is not None:
+        _systemctl(run, "stop", ARMED_PATTERN, check=False)
+
+
 def install(
     exe: str,
     plan_at: str = "06:00",
@@ -156,7 +162,7 @@ def uninstall(run: Runner = subprocess.run, directory: Path | None = None) -> li
     directory = directory or unit_dir()
     _systemctl(run, "disable", "--now", TICK_TIMER, check=False)
     _systemctl(run, "disable", TICK_SERVICE, check=False)
-    _systemctl(run, "stop", ARMED_PATTERN, check=False)
+    disarm(run)
     out: list[str] = []
     for name in (TICK_TIMER, TICK_SERVICE, FAILED_SERVICE):
         path = directory / name

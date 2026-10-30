@@ -1,15 +1,26 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 import typer
 from rich.text import Text
 
-from holded_tt.autoclock import arm_next, executable, load_plan, next_event, run_tick
+from holded_tt.autoclock import (
+    arm_next,
+    executable,
+    load_plan,
+    load_skips,
+    next_event,
+    run_tick,
+    save_skips,
+    skip_plan,
+    unskip_plan,
+)
+from holded_tt.dates import date_range
 from holded_tt.schedule import fmt_minutes
 from holded_tt import units
-from holded_tt.commands.track import _timezone_for_day
+from holded_tt.commands.track import _resolve_date_range, _timezone_for_day
 from holded_tt.console import get_output_console, render_error
 from holded_tt.errors import HoldedCliError, InputError
 from holded_tt.holded_client import HoldedClient
@@ -214,7 +225,14 @@ def tick_command(
     now = datetime.now(_timezone_for_day(state.config.timezone, date.today()))
     try:
         with HoldedClient(state.session_store) as client:
-            lines = run_tick(state.config, plan_file, client, now, dry_run)
+            lines = run_tick(
+                state.config,
+                plan_file,
+                client,
+                now,
+                dry_run,
+                load_skips(state.config_dir / "skips.json"),
+            )
         plan = load_plan(plan_file) if schedule else None
         if plan is not None and dry_run:
             nxt = next_event(plan)
@@ -229,6 +247,104 @@ def tick_command(
         raise typer.Exit(code=error.exit_code) from None
     for line in lines:
         typer.echo(f"{now:%Y-%m-%d %H:%M}  {line}")
+
+
+def _local_today(state: AppState) -> date:
+    return datetime.now(_timezone_for_day(state.config.timezone, date.today())).date()
+
+
+@app.command("skip")
+def skip_command(
+    ctx: typer.Context,
+    target_date: Optional[str] = typer.Option(
+        None, "--date", help="Single day to skip (YYYY-MM-DD)."
+    ),
+    from_date: Optional[str] = typer.Option(
+        None, "--from", help="First day to skip (YYYY-MM-DD)."
+    ),
+    to_date: Optional[str] = typer.Option(
+        None, "--to", help="Last day to skip (YYYY-MM-DD)."
+    ),
+    undo: bool = typer.Option(
+        False, "--undo", help="Stop skipping these days."
+    ),
+) -> None:
+    """Do not clock the given days: a sick day, a trip, anything not in Holded.
+
+    With no dates it skips today. Skipping today also cancels what is left of
+    today's plan and stops the timer armed for it.
+
+    Example:
+      holded-tt clock skip
+      holded-tt clock skip --from 2026-11-02 --to 2026-11-06
+      holded-tt clock skip --date 2026-11-03 --undo
+    """
+    state = _get_state(ctx)
+    plan_file = state.config_dir / "plan.json"
+    skips_file = state.config_dir / "skips.json"
+    today = _local_today(state)
+    lines: list[str] = []
+    try:
+        if target_date is not None and (from_date or to_date):
+            raise InputError(
+                message="--date cannot be combined with --from or --to.",
+                hint="Use --date YYYY-MM-DD alone, or --from/--to for a range.",
+            )
+        if target_date is not None:
+            from_date = to_date = target_date
+        if from_date or to_date:
+            first, last = _resolve_date_range(from_date, to_date, False)
+        else:
+            first = last = today
+        requested = date_range(first, last)
+        days = [d for d in requested if d >= today]
+        if not days:
+            raise InputError(
+                message="Those days are already in the past.",
+                hint="Only today and future days can be skipped.",
+            )
+        if len(days) < len(requested):
+            lines.append(f"ignored {len(requested) - len(days)} day(s) in the past")
+
+        skips = set(load_skips(skips_file))
+        skips = skips - set(days) if undo else skips | set(days)
+        save_skips(skips_file, skips, today)
+        verb = "no longer skipping" if undo else "skipping"
+        span = days[0].isoformat() if len(days) == 1 else f"{days[0]} to {days[-1]}"
+        lines.append(f"{verb} {len(days)} day(s): {span}")
+
+        if today in days:
+            if undo:
+                unskip_plan(plan_file, today)
+                # Skipping today disarmed the timer, so the chain is broken whether or not a
+                # plan had been made: someone has to plan the rest of today.
+                lines.append(
+                    "run `holded-tt clock tick --schedule` to plan the rest of today, "
+                    "or leave it for tomorrow's timer"
+                )
+            else:
+                before = load_plan(plan_file)
+                skip_plan(plan_file, today)
+                units.disarm()
+                if (
+                    before is not None
+                    and before.date == today.isoformat()
+                    and "in" in before.done
+                    and "out" not in before.done
+                ):
+                    lines.append(
+                        "warning: you are clocked in and nothing will clock you out now; "
+                        "run `holded-tt clock out` when you are done"
+                    )
+    except HoldedCliError as error:
+        render_error(error)
+        raise typer.Exit(code=error.exit_code) from None
+    upcoming = sorted(d.isoformat() for d in skips)
+    if upcoming:
+        shown = ", ".join(upcoming[:10]) + (" ..." if len(upcoming) > 10 else "")
+        lines.append(f"skipped days: {shown}")
+    for line in lines:
+        typer.echo(line)
 
 
 @app.command("install")

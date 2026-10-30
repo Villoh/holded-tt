@@ -19,4 +19,4 @@ holded-tt clock resume
 
 ## Automatic clocking
 
-`clock tick`, `clock install` and `clock uninstall` run all of the above for you on a schedule, with jitter, skipping weekends, holidays and time off. See [Automatic clocking](automation.md).
+`clock tick`, `clock install` and `clock uninstall` run all of the above for you on a schedule, with jitter, skipping weekends, holidays and time off. `clock skip` rules out a day by hand. See [Automatic clocking](automation.md).

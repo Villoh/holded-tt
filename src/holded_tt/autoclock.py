@@ -8,13 +8,14 @@ resume after a reboot: every step checks what Holded says before acting.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import random
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -33,6 +34,7 @@ from holded_tt.schedule import (
 from holded_tt.timeoff import extract_employee_absences, extract_workplace_holidays
 
 _NEVER = 10**6
+SKIPPED_BY_YOU = "skipped by you"
 
 
 @dataclass
@@ -64,10 +66,15 @@ def _covers(absence: dict[str, Any], day: date) -> bool:
 
 
 def build_plan(
-    config: AppConfig, day: date, fetch_summary: Callable[[int], dict]
+    config: AppConfig,
+    day: date,
+    fetch_summary: Callable[[int], dict],
+    skips: frozenset[date] = frozenset(),
 ) -> Plan:
-    """Plan ``day``: skip weekends, holidays and accepted time off, else jitter it."""
+    """Plan ``day``: skip days you ruled out, weekends, holidays and accepted time off."""
     iso = day.isoformat()
+    if day in skips:  # checked first: no reason to ask Holded about a day you are not working
+        return Plan(iso, "skipped", SKIPPED_BY_YOU)
     if day.weekday() >= 5:
         return Plan(iso, "skipped", "weekend")
     summary = fetch_summary(day.year)
@@ -216,6 +223,43 @@ def step(plan: Plan, now: int, tracker: Tracker, max_late: int) -> list[str]:
     return acts
 
 
+def load_skips(path: Path) -> frozenset[date]:
+    """Days you asked not to be clocked. Missing or corrupt file means none."""
+    try:
+        raw = json.loads(path.read_text())["days"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return frozenset()
+    days: set[date] = set()
+    for item in raw if isinstance(raw, list) else []:
+        with contextlib.suppress(TypeError, ValueError):  # one bad entry must not drop the rest
+            days.add(date.fromisoformat(item))
+    return frozenset(days)
+
+
+def save_skips(path: Path, days: Iterable[date], today: date) -> None:
+    """Store ``days``, dropping the ones already in the past."""
+    path.write_text(json.dumps({"days": sorted(d.isoformat() for d in days if d >= today)}))
+
+
+def skip_plan(plan_file: Path, today: date) -> bool:
+    """Cancel what is left of today's plan. True if a plan was there to cancel."""
+    plan = load_plan(plan_file)
+    if plan is None or plan.date != today.isoformat():
+        return False  # nothing planned yet: the skip list is enough
+    plan.status, plan.reason = "skipped", SKIPPED_BY_YOU
+    save_plan(plan_file, plan)
+    return True
+
+
+def unskip_plan(plan_file: Path, today: date) -> bool:
+    """Forget today's plan if it was skipped by you, so the next tick plans it afresh."""
+    plan = load_plan(plan_file)
+    if plan is None or plan.date != today.isoformat() or plan.reason != SKIPPED_BY_YOU:
+        return False
+    plan_file.unlink(missing_ok=True)
+    return True
+
+
 def load_plan(path: Path) -> Plan | None:
     try:
         return Plan(**json.loads(path.read_text()))
@@ -265,6 +309,7 @@ def run_tick(
     client: Any,
     now: datetime,
     dry_run: bool = False,
+    skips: frozenset[date] = frozenset(),
 ) -> list[str]:
     """Advance today's plan once. Returns log lines; raises HoldedCliError on failure.
 
@@ -273,13 +318,19 @@ def run_tick(
     out: list[str] = []
     plan = load_plan(plan_file)
     if plan is None or plan.date != now.date().isoformat():
-        plan = build_plan(config, now.date(), client.get_timeoff_summary)
+        plan = build_plan(config, now.date(), client.get_timeoff_summary, skips)
         if not dry_run:
             save_plan(plan_file, plan)  # the day's jitter is fixed from here on
         if plan.status == "skipped":
             out.append(f"{plan.date}: skipped ({plan.reason})")
         else:
             out.append(f"{plan.date}: plan {_describe(plan)}")
+    elif now.date() in skips and plan.status == "active":
+        # Skipped after the plan was made, e.g. a stale timer fired: honour it anyway.
+        plan.status, plan.reason = "skipped", SKIPPED_BY_YOU
+        if not dry_run:
+            save_plan(plan_file, plan)
+        out.append(f"{plan.date}: skipped ({plan.reason})")
 
     now_min = now.hour * 60 + now.minute
     if _next_due(plan) > now_min:

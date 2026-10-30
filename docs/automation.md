@@ -37,6 +37,23 @@ journalctl --user -u 'holded-tt-*' -n 30
 
 To remove it, `holded-tt clock uninstall` disables and deletes the units it generated and stops any armed timer. It leaves other files alone.
 
+## Skip a day
+
+Sick, travelling, or just not working a day that is not registered in Holded as time off? Tell `tick` not to clock it:
+
+```bash
+holded-tt clock skip                                   # today
+holded-tt clock skip --date 2026-11-03                 # one day
+holded-tt clock skip --from 2026-11-02 --to 2026-11-06 # a range
+holded-tt clock skip --date 2026-11-03 --undo          # change your mind
+```
+
+Skipped days are stored in `skips.json` next to `config.toml`; past days are dropped from it, so it never grows. Only today and future days can be skipped.
+
+Skipping **today** also cancels what is left of today's plan and stops the timer armed for the next event, so nothing fires later. If you were already clocked in, it tells you so: nothing will clock you out now, so run `holded-tt clock out` yourself. Undoing today's skip does not re-plan the day on its own, because the timer was stopped; it tells you to run `holded-tt clock tick --schedule` (or leave it for tomorrow's timer).
+
+A tick also obeys the list on its own, so a timer that was somehow not stopped still clocks nothing.
+
 ## How it behaves
 
 - **Event-driven.** With `--schedule`, each run arms a one-shot systemd timer for the **next** planned event and exits. Nothing runs or sleeps in between: about 5 runs a day, each at the planned second (random seconds per event, so entries are not always at `:00`).
@@ -74,6 +91,7 @@ holded-tt clock tick --dry-run            # show what would happen; clock and sa
 holded-tt clock tick --schedule           # ...then arm a one-shot timer for the next event (Linux)
 holded-tt clock install [--plan-at HH:MM] [--dry-run]
 holded-tt clock uninstall
+holded-tt clock skip [--date D | --from D --to D] [--undo]
 ```
 
 ## Limits
