@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import random
 import re
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Optional
+from typing import Optional, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import typer
@@ -81,6 +82,33 @@ def _hhmm_to_minutes(t: str) -> int:
     return h * 60 + m
 
 
+def _fmt_minutes(m: int) -> str:
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def _jitter_schedule(
+    start: str, end: str, pauses: tuple[str, ...], max_minutes: int
+) -> tuple[str, str, tuple[str, ...]]:
+    """Randomise a day by up to ``max_minutes``, never shortening net hours.
+
+    Start moves +-N; end follows the same shift (same duration) plus 0..N extra.
+    Pauses shift +-N as a block, kept inside the new day, so net >= configured.
+    """
+    s, e = _hhmm_to_minutes(start), _hhmm_to_minutes(end)
+    new_end = min(e + random.randint(-max_minutes, max_minutes) + random.randint(0, max_minutes), 23 * 60 + 59)
+    new_start = max(min(s + random.randint(-max_minutes, max_minutes), new_end - (e - s)), 0)
+    new_end = max(new_end, new_start + (e - s))
+    windows = [tuple(map(_hhmm_to_minutes, p.split("-"))) for p in pauses]
+    lo = max(-max_minutes, new_start - min((a for a, _ in windows), default=new_start))
+    hi = min(max_minutes, new_end - max((b for _, b in windows), default=new_end))
+    shift = random.randint(lo, hi) if lo <= hi else 0
+    return (
+        _fmt_minutes(new_start),
+        _fmt_minutes(new_end),
+        tuple(f"{_fmt_minutes(a + shift)}-{_fmt_minutes(b + shift)}" for a, b in windows),
+    )
+
+
 def _build_pauses(pauses: list[str]) -> list[dict]:
     return [{"start": p.split("-")[0], "end": p.split("-")[1]} for p in pauses]
 
@@ -111,25 +139,21 @@ def _build_trackers(
     start_time = time.fromisoformat(start)
     end_time = time.fromisoformat(end)
     pause_windows = _build_pauses(pauses)
-    return [
-        {
-            "id": row["id"],
-            "workplaceId": row["workplaceId"],
-            "isRemote": row["isRemote"],
-            "start": datetime.combine(
-                row["date"],
-                start_time,
-                tzinfo=_timezone_for_day(str(row["timezone"]), row["date"]),
-            ).isoformat(),
-            "end": datetime.combine(
-                row["date"],
-                end_time,
-                tzinfo=_timezone_for_day(str(row["timezone"]), row["date"]),
-            ).isoformat(),
-            "pauses": [pause.copy() for pause in pause_windows],
-        }
-        for row in tracker_rows
-    ]
+    trackers: list[dict] = []
+    for row in tracker_rows:
+        row_date = cast("date", row["date"])
+        tzinfo = _timezone_for_day(str(row["timezone"]), row_date)
+        trackers.append(
+            {
+                "id": row["id"],
+                "workplaceId": row["workplaceId"],
+                "isRemote": row["isRemote"],
+                "start": datetime.combine(row_date, start_time, tzinfo=tzinfo).isoformat(),
+                "end": datetime.combine(row_date, end_time, tzinfo=tzinfo).isoformat(),
+                "pauses": [pause.copy() for pause in pause_windows],
+            }
+        )
+    return trackers
 
 
 def _resolve_single_date(target_date: Optional[str], today: bool) -> date:
@@ -390,20 +414,16 @@ def _render_trackers_table(entries: list[dict[str, object]]) -> Table:
             if isinstance(day, str) and len(day) >= 10
             else date.today()
         )
-        trackers = (
-            entry.get("trackers", []) if isinstance(entry.get("trackers"), list) else []
-        )
+        raw_trackers = entry.get("trackers")
+        trackers = raw_trackers if isinstance(raw_trackers, list) else []
         if not trackers:
             table.add_row(str(day), "-", "-", "-", "-", "empty", "-", "-", "-")
             continue
         for tracker in trackers:
             if not isinstance(tracker, dict):
                 continue
-            tz_name = (
-                tracker.get("timezone")
-                if isinstance(tracker.get("timezone"), str)
-                else "UTC"
-            )
+            raw_tz = tracker.get("timezone")
+            tz_name = raw_tz if isinstance(raw_tz, str) else "UTC"
             pauses = (
                 tracker.get("pauses", [])
                 if isinstance(tracker.get("pauses"), list)
@@ -434,7 +454,7 @@ def _render_trackers_table(entries: list[dict[str, object]]) -> Table:
                 ),
                 str(tracker.get("approvedStatus") or "-"),
                 str(tracker.get("logMethod") or "-"),
-                "yes" if tracker.get("isRemote") is True else "no",
+                "yes" if tracker.get("isRemote") else "no",
             )
     return table
 
@@ -511,6 +531,7 @@ def track_command(
     pause: Optional[list[str]] = typer.Option(
         None, "--pause", help="Pause window (HH:MM-HH:MM). Repeatable."
     ),
+    jitter: Optional[int] = None,
     yes: bool = typer.Option(
         False, "--yes", "-y", help="Skip confirmation for large submissions."
     ),
@@ -547,11 +568,13 @@ def track_command(
             if explicit_pauses is not None
             else override.get("pause", config.pause)
         )
-        return (
-            start or override.get("start") or config.start,
-            end or override.get("end") or config.end,
+        sched = (
+            str(start or override.get("start") or config.start),
+            str(end or override.get("end") or config.end),
             tuple(_validate_pause(p) for p in pauses),
         )
+        max_jitter = config.jitter if jitter is None else jitter
+        return _jitter_schedule(*sched, max_jitter) if max_jitter else sched
 
     days = _resolve_track_days(
         state,
@@ -713,7 +736,7 @@ def track_update_command(
     console = get_output_console()
 
     def build_payload_for_row(row: dict[str, object]) -> dict[str, object]:
-        row_date = row["date"]
+        row_date = cast("date", row["date"])
         timezone_name = str(row["timezone"])
         current_start = row.get("start")
         current_end = row.get("end")
@@ -740,7 +763,9 @@ def track_update_command(
             if pause is not None
             else [
                 f"{item['start']}-{item['end']}"
-                for item in _extract_pause_windows(row.get("pauses", []), timezone_name)
+                for item in _extract_pause_windows(
+                    cast("list[object]", row.get("pauses", [])), timezone_name
+                )
             ]
         )
         return {
@@ -799,7 +824,7 @@ def track_update_command(
             console.print(
                 f"[dim]{row['id']}  ·  {preview['effective_start']} → {preview['effective_end']}"
                 + (
-                    f"  ·  pause {', '.join(preview['effective_pauses'])}"
+                    f"  ·  pause {', '.join(cast('list[str]', preview['effective_pauses']))}"
                     if preview["effective_pauses"]
                     else ""
                 )
@@ -871,6 +896,12 @@ def track_app_callback(
     pause: Optional[list[str]] = typer.Option(
         None, "--pause", help="Pause window (HH:MM-HH:MM). Repeatable."
     ),
+    jitter: Optional[int] = typer.Option(
+        None,
+        "--jitter",
+        min=0,
+        help="Max random minutes of jitter on start/end/pause (never shortens the day). Overrides config.",
+    ),
     yes: bool = typer.Option(
         False, "--yes", "-y", help="Skip confirmation for large submissions."
     ),
@@ -890,6 +921,7 @@ def track_app_callback(
             start=start,
             end=end,
             pause=pause,
+            jitter=jitter,
             yes=yes,
         )
 
