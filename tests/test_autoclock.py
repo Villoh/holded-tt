@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import importlib
+import os
 import random
+import sys
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 
+from holded_tt import autoclock
 from holded_tt.autoclock import (
     Plan,
     Tracker,
@@ -646,6 +649,116 @@ def test_executable_prefers_how_we_were_started(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("shutil.which", lambda _n: None)
     with pytest.raises(HoldedCliError, match="Cannot find"):
         executable()
+
+
+nix_paths = pytest.mark.skipif(sys.platform == "win32", reason="needs POSIX symlinks and paths")
+
+
+@pytest.fixture()
+def nix(monkeypatch, tmp_path):
+    """A fake Nix store, with Python started the way the real wrapper starts it.
+
+    Measured on a real build: the wrapper makes Python see `.holded-tt-wrapped` as its
+    script, and puts its own store bin first on PATH. Nothing else on PATH is touched.
+    """
+    store = tmp_path / "store"
+    monkeypatch.setattr(autoclock, "NIX_STORE", f"{store}/")
+    bin_dir = store / "abc-holded-tt-1.4.0" / "bin"
+    bin_dir.mkdir(parents=True)
+    real = bin_dir / "holded-tt"
+    real.write_text("#!/bin/sh\n")
+    real.chmod(0o755)
+    profile = tmp_path / "profile" / "bin"
+    profile.mkdir(parents=True)
+
+    def start(path_dirs=(), argv0=None):
+        monkeypatch.setattr("sys.argv", [argv0 or str(bin_dir / ".holded-tt-wrapped"), "clock", "install"])
+        monkeypatch.setenv("PATH", os.pathsep.join([str(bin_dir), *map(str, path_dirs)]))
+
+    return SimpleNamespace(real=real, bin_dir=bin_dir, profile=profile, start=start, tmp=tmp_path)
+
+
+def _link(directory, target, name="holded-tt"):
+    link = directory / name
+    link.symlink_to(target)
+    return link
+
+
+@nix_paths
+def test_executable_prefers_the_stable_profile_path_over_the_nix_store(nix) -> None:
+    """Without this, units point at /nix/store, which changes on rebuild and is garbage-collected."""
+    link = _link(nix.profile, nix.real)
+    nix.start([nix.profile])
+
+    assert executable() == str(link)
+
+
+@nix_paths
+def test_executable_works_when_python_reports_the_store_script_directly(nix) -> None:
+    link = _link(nix.profile, nix.real)
+    nix.start([nix.profile], argv0=str(nix.real))
+
+    assert executable() == str(link)
+
+
+@nix_paths
+def test_executable_keeps_the_store_path_when_nothing_stable_is_on_path(nix) -> None:
+    nix.start([])
+
+    assert executable() == str(nix.real)
+
+
+@nix_paths
+def test_executable_does_not_swap_in_a_different_program_from_path(nix) -> None:
+    """An unrelated holded-tt on PATH must not silently replace the one in use."""
+    other = nix.tmp / "other" / "bin"
+    other.mkdir(parents=True)
+    (other / "holded-tt").write_text("#!/bin/sh\n")
+    nix.start([other])
+
+    assert executable() == str(nix.real)
+
+
+@nix_paths
+def test_executable_takes_the_first_matching_entry_on_path(nix) -> None:
+    second = nix.tmp / "second" / "bin"
+    second.mkdir(parents=True)
+    first = _link(nix.profile, nix.real)
+    _link(second, nix.real)
+    nix.start([nix.profile, second])
+
+    assert executable() == str(first)
+
+
+@nix_paths
+def test_executable_follows_a_chain_of_symlinks_like_home_manager(nix) -> None:
+    """profile -> home-manager-path -> store, as on a real NixOS setup."""
+    hm = nix.tmp / "hm" / "bin"
+    hm.mkdir(parents=True)
+    hop = _link(hm, nix.real)
+    link = _link(nix.profile, hop)
+    nix.start([nix.profile])
+
+    assert executable() == str(link)
+
+
+@nix_paths
+def test_executable_ignores_a_broken_symlink_and_empty_path_entries(nix) -> None:
+    _link(nix.profile, nix.tmp / "gone")
+    nix.start(["", nix.profile])
+
+    assert executable() == str(nix.real)
+
+
+@nix_paths
+def test_executable_outside_nix_is_untouched_by_path(monkeypatch, tmp_path) -> None:
+    other = tmp_path / "usr" / "bin"
+    other.mkdir(parents=True)
+    (other / "holded-tt").write_text("#!/bin/sh\n")
+    monkeypatch.setattr("sys.argv", ["/home/me/.local/bin/holded-tt"])
+    monkeypatch.setenv("PATH", str(other))
+
+    assert executable() == "/home/me/.local/bin/holded-tt"
 
 
 def test_chain_of_events_follows_the_plan_through_a_whole_day(tmp_path) -> None:
