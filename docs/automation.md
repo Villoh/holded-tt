@@ -23,7 +23,7 @@ holded-tt clock install                      # write them and enable the timer
 Things worth knowing:
 
 - **The service is enabled but not started.** Starting it runs a real tick: it plans today and, if a clock-in is already due and within `max_late`, clocks in. The timer only waits for the next morning. To plan today right away, run `holded-tt clock tick --schedule` yourself.
-- **The executable path is baked into the units**, and every timer they arm reuses it. `install` uses the path you ran it from. Run it from a path that survives updates: on NixOS that is `/etc/profiles/per-user/<user>/bin/holded-tt`, not `/nix/store/...`, which changes on every rebuild and is garbage-collected. `install` warns when it sees a store path.
+- **The executable path is baked into the units**, and every timer they arm reuses it. `install` uses the path you ran it from. Under Nix, Python only sees `/nix/store/...`, which changes on every rebuild and is garbage-collected, so `install` looks on your `PATH` for the same program under a stable name (on NixOS, `/etc/profiles/per-user/<user>/bin/holded-tt`) and uses that. If there is none it falls back to the store path and warns.
 - **The plan time must be before your earliest possible clock-in** (start minus jitter).
 - **It never overwrites a unit it did not generate**, and refuses symlinks (home-manager and similar). In that case declare the three units yourself: `clock install --dry-run` prints the exact text.
 - `loginctl enable-linger $USER` is optional. It only matters if you want clocking with no open login session. Without it the morning plan runs when you log in.

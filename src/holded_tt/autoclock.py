@@ -116,10 +116,40 @@ def next_event(plan: Plan) -> int | None:
     return None if due == _NEVER else due
 
 
+NIX_STORE = "/nix/store/"
+NIX_WRAPPED = ".holded-tt-wrapped"
+
+
+def _stable_alias(target: str) -> str | None:
+    """A PATH entry named holded-tt, outside the Nix store, that is the same program."""
+    real = os.path.realpath(target)
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, "holded-tt")
+        if (
+            directory
+            and not candidate.startswith(NIX_STORE)
+            and os.path.isfile(candidate)
+            and os.path.realpath(candidate) == real  # same file, so it runs just as well
+        ):
+            return candidate
+    return None
+
+
 def executable() -> str:
-    """Path the scheduled timers should run: how we were started, else PATH."""
+    """Path the scheduled timers should run: how we were started, else PATH.
+
+    Under Nix the program runs through a wrapper: Python sees `.holded-tt-wrapped` as
+    its script and the wrapper puts its own /nix/store/.../bin first on PATH, so both
+    point into the store, which changes on every rebuild and is garbage-collected.
+    The rest of PATH is untouched, so look there for the same program under a stable
+    name (e.g. /etc/profiles/per-user/<user>/bin/holded-tt).
+    """
     argv0 = os.path.abspath(sys.argv[0])
+    if os.path.basename(argv0) == NIX_WRAPPED:
+        argv0 = os.path.join(os.path.dirname(argv0), "holded-tt")
     if os.path.basename(argv0) == "holded-tt":
+        if argv0.startswith(NIX_STORE):
+            return _stable_alias(argv0) or argv0
         return argv0
     found = shutil.which("holded-tt")
     if found is None:
