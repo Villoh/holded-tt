@@ -35,17 +35,20 @@ def day_schedule(
 
 
 def jitter_schedule(
-    start: str, end: str, pauses: tuple[str, ...], max_minutes: int
+    start: str, end: str, pauses: tuple[str, ...], max_minutes: int, max_extra: int
 ) -> tuple[str, str, tuple[str, ...]]:
-    """Randomise a day by up to ``max_minutes``, never shortening net hours.
+    """Randomise a day: start +-``max_minutes``, plus 0..``max_extra`` extra minutes worked.
 
-    Start moves +-N; end follows the same shift (same duration) plus 0..N extra.
-    Pauses shift +-N as a block, kept inside the new day, so net >= configured.
+    The day keeps its configured length and gains a single random ``extra`` (never
+    negative), so net hours land between the configured ones and those plus
+    ``max_extra``. Pauses shift +-``max_minutes`` as a block, kept inside the day,
+    with their length unchanged.
     """
     s, e = hhmm_to_minutes(start), hhmm_to_minutes(end)
-    new_end = min(e + random.randint(-max_minutes, max_minutes) + random.randint(0, max_minutes), 23 * 60 + 59)
-    new_start = max(min(s + random.randint(-max_minutes, max_minutes), new_end - (e - s)), 0)
-    new_end = max(new_end, new_start + (e - s))
+    last = 23 * 60 + 59
+    length = e - s + random.randint(0, max(0, min(max_extra, last - (e - s))))  # must fit before 23:59
+    new_start = max(min(s + random.randint(-max_minutes, max_minutes), last - length), 0)
+    new_end = new_start + length
     windows = [tuple(map(hhmm_to_minutes, p.split("-"))) for p in pauses]
     lo = max(-max_minutes, new_start - min((a for a, _ in windows), default=new_start))
     hi = min(max_minutes, new_end - max((b for _, b in windows), default=new_end))

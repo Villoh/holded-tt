@@ -18,6 +18,7 @@ Actual built-in defaults used when `config.toml` is first created:
 - `defaults.pause`: empty list (`[]`)
 - `defaults.jitter`: `0` (no randomisation)
 - `defaults.max_late`: `90` (minutes; used by `clock tick`)
+- `defaults.max_extra`: `15` (minutes; the most extra time worked over the schedule when jitter is on)
 
 Examples below are sample values you may want to change, not the shipped defaults.
 
@@ -32,6 +33,7 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
 | `defaults.jitter`        | Max random minutes on start/end/pause, `0` = off | `15`   |
 | `defaults.max_late`      | `clock tick` skips a clock-in later than this (minutes) | `90` |
+| `defaults.max_extra`     | Ceiling on extra minutes worked over the schedule with jitter on | `15` |
 | `defaults.<day>.<field>` | Per-weekday override (see below)   | `defaults.fri.end 15:00` |
 
 **Per-weekday overrides:** `<day>` is `mon`, `tue`, `wed`, `thu`, `fri`, `sat` or `sun`, and `<field>` is `start`, `end` or `pause`. Anything not overridden falls back to the base defaults. `track` sends one batch per distinct schedule, and explicit `--start`/`--end`/`--pause` flags apply to every day.
