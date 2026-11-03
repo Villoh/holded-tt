@@ -18,6 +18,7 @@ from holded_tt import wintasks as w
 
 pytestmark = [
     pytest.mark.windows_tasks,
+    pytest.mark.real_backend,  # conftest forces systemd otherwise
     pytest.mark.skipif(
         sys.platform != "win32" or os.environ.get("HOLDED_TT_WINDOWS_TASKS") != "1",
         reason="needs Windows and HOLDED_TT_WINDOWS_TASKS=1",
