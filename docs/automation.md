@@ -55,7 +55,7 @@ skipped days: 2026-11-05
 - **`actual`** is when you really clocked in, shown while it can be recovered from the plan (not after a late resume moved the clock-out).
 - A day that is not worked says why instead: `skipped: holiday ...`, `skipped: weekend`, `skipped: skipped by you`, or `missed: clock-in was planned for ...`.
 - **`warning: nothing is armed`** means the next event has no timer, so it will not happen until the next planning run. Run `holded-tt clock tick --schedule` to re-arm. It is not shown where systemd cannot be asked, and it is expected if you run `tick` from a periodic timer without `--schedule`.
-- The times of events already done are the planned ones; the real tracker is in `holded-tt clock status`, and `holded-tt track show --date today` shows what Holded recorded.
+- The times of events already done are the planned ones; the real tracker is in `holded-tt clock status`, and `holded-tt track show --today` shows what Holded recorded.
 
 To remove it, `holded-tt clock uninstall` disables and deletes the units it generated and stops any armed timer. It leaves other files alone.
 
