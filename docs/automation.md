@@ -4,7 +4,11 @@
 
 On its first run of the day it plans the day (start, end, pauses, per-weekday overrides, `defaults.jitter`), saves the plan to `plan.json` next to `config.toml`, and from then on clocks in, pauses, resumes and clocks out as each time comes due.
 
-## Set it up (Linux)
+## Set it up
+
+`clock install` sets up automatic clocking with the scheduler your system has: systemd on Linux, the Task Scheduler on Windows. macOS has neither backend yet: see [Without a scheduler backend](#without-a-scheduler-backend-macos-or-by-preference).
+
+### Linux (systemd)
 
 ```bash
 holded-tt clock tick --dry-run             # check first: what a tick would do right now; clocks and saves nothing
@@ -36,6 +40,23 @@ systemctl --user list-timers                 # the same, as systemd sees it (hol
 journalctl --user -u 'holded-tt-*' -n 30     # what each run did
 ```
 
+### Windows (Task Scheduler)
+
+```powershell
+holded-tt clock install --dry-run            # prints the task definition, creates nothing
+holded-tt clock install                      # creates the task
+holded-tt clock plan
+holded-tt clock uninstall
+```
+
+`install` creates one task, `\holded-tt\holded-tt-plan`, that runs `holded-tt clock tick --schedule` every weekday at 06:00 (`--plan-at HH:MM`) and at every logon, and is set to run a missed start as soon as possible. Each run arms a one-shot task `\holded-tt\holded-tt-next-<UTC time>` for the next event, exactly like the systemd timers, and these delete themselves an hour after they fire.
+
+- **It does not start a tick**, so nothing is clocked until the task's next trigger. Run `holded-tt clock tick --schedule` yourself to plan today.
+- **Runs only while you are logged on**, as you and without elevation. No password is stored, which is also why it cannot run with the session closed.
+- **Retries are done by the app**, not by Windows. Task Scheduler's own "restart on failure" does not restart a task whose program exits with an error (measured on a real Windows runner), so after a failed run `tick --schedule` arms a retry task for 2 minutes later, up to 15 attempts a day, as systemd does. A failure that retrying cannot fix (a missed clock-in) is not retried. There is no `OnFailure` alert: look at the task history (`taskschd.msc`) or `holded-tt clock plan`, which warns when the next event is not armed.
+- **The executable** is the one you ran `install` from (`holded-tt.exe` in the Scripts folder of `pipx`, `uv tool` or your virtualenv). Reinstall after moving or upgrading it to a new location.
+- `clock skip` deletes the armed one-shot tasks, like it stops the timers on Linux.
+
 ## See the plan
 
 `holded-tt clock plan` is read-only: it reads `plan.json`, `skips.json` and what systemd has armed, and does not call Holded.
@@ -54,7 +75,7 @@ skipped days: 2026-11-05
 - **`next`** is the first event still to happen, with the second its timer will fire at. **`next planning`** is the daily timer.
 - **`actual`** is when you really clocked in, shown while it can be recovered from the plan (not after a late resume moved the clock-out).
 - A day that is not worked says why instead: `skipped: holiday ...`, `skipped: weekend`, `skipped: skipped by you`, or `missed: clock-in was planned for ...`.
-- **`warning: nothing is armed`** means the next event has no timer, so it will not happen until the next planning run. Run `holded-tt clock tick --schedule` to re-arm. It is not shown where systemd cannot be asked, and it is expected if you run `tick` from a periodic timer without `--schedule`.
+- **`warning: nothing is armed`** (on Windows it reads the one-shot tasks) means the next event has no timer, so it will not happen until the next planning run. Run `holded-tt clock tick --schedule` to re-arm. It is not shown where systemd cannot be asked, and it is expected if you run `tick` from a periodic timer without `--schedule`.
 - The times of events already done are the planned ones; the real tracker is in `holded-tt clock status`, and `holded-tt track show --today` shows what Holded recorded.
 
 To remove it, `holded-tt clock uninstall` disables and deletes the units it generated and stops any armed timer. It leaves other files alone.
@@ -101,9 +122,9 @@ Every failed attempt runs `holded-tt-failed.service`, which is limited to one al
 
 If a run is killed before it can arm the next event, the chain stops until the next morning or boot run, and the alert is how you find out. `tick` only works while the machine is on and the session is valid (`holded-tt session`).
 
-## Without systemd (macOS, Windows, or by preference)
+## Without a scheduler backend (macOS, or by preference)
 
-Run `clock tick` **without** `--schedule` from a timer every 5 minutes: a `launchd` agent with `StartInterval=300`, or a Task Scheduler task that repeats every 5 minutes. It does nothing and calls nothing until something is due. The cost is that entries land on the 5-minute grid, because each event happens at the first tick after its planned time.
+Run `clock tick` **without** `--schedule` from a timer every 5 minutes, for example a `launchd` agent with `StartInterval=300` on macOS. It does nothing and calls nothing until something is due. The cost is that entries land on the 5-minute grid, because each event happens at the first tick after its planned time.
 
 ## Command reference
 
@@ -111,7 +132,7 @@ Run `clock tick` **without** `--schedule` from a timer every 5 minutes: a `launc
 holded-tt clock tick                      # advance today's plan once
 holded-tt clock plan                      # today's plan, the armed event, next planning (read-only)
 holded-tt clock tick --dry-run            # show what would happen; clock and save nothing
-holded-tt clock tick --schedule           # ...then arm a one-shot timer for the next event (Linux)
+holded-tt clock tick --schedule           # ...then arm a one-shot timer for the next event (Linux, Windows)
 holded-tt clock install [--plan-at HH:MM] [--dry-run]
 holded-tt clock uninstall
 holded-tt clock skip [--date D | --from D --to D] [--undo]
@@ -119,6 +140,7 @@ holded-tt clock skip [--date D | --from D --to D] [--undo]
 
 ## Limits
 
-- `--schedule` and `install` need systemd, so Linux only.
+- `--schedule` and `install` need systemd (Linux) or the Task Scheduler (Windows). macOS has no backend.
+- **The Windows backend is tested on a real Windows runner in CI** (task creation, replacement, the one-shot firing, removal), but not on a desktop: a console window may flash when a task runs, and a task that fires while the machine is asleep is untested. The real `holded-tt.exe` has not been run end to end by a task.
 - `tick` records hours whether or not you actually worked that day. Time off registered in Holded is respected; a sick day or a trip is not.
 - A timer that comes due while the machine is suspended should run when it wakes; this has not been verified.
