@@ -12,6 +12,7 @@ from holded_tt.autoclock import (
     load_plan,
     load_skips,
     next_event,
+    plan_overview,
     run_tick,
     save_skips,
     skip_plan,
@@ -251,6 +252,28 @@ def tick_command(
 
 def _local_today(state: AppState) -> date:
     return datetime.now(_timezone_for_day(state.config.timezone, date.today())).date()
+
+
+@app.command("plan")
+def plan_command(ctx: typer.Context) -> None:
+    """Show today's automatic clocking plan and what happens next.
+
+    Read-only: it reads plan.json, skips.json and what systemd has armed, and
+    does not call Holded.
+    """
+    state = _get_state(ctx)
+    today = _local_today(state)
+    tz = _timezone_for_day(state.config.timezone, today)
+    lines = plan_overview(
+        load_plan(state.config_dir / "plan.json"),
+        today,
+        load_skips(state.config_dir / "skips.json"),
+        units.armed_events(),
+        tz,
+        units.next_planning(),
+    )
+    for line in lines:
+        typer.echo(line)
 
 
 @app.command("skip")

@@ -7,7 +7,7 @@ On its first run of the day it plans the day (start, end, pauses, per-weekday ov
 ## Set it up (Linux)
 
 ```bash
-holded-tt clock tick --schedule --dry-run    # check first: today's plan and the next event, changes nothing
+holded-tt clock tick --dry-run             # check first: what a tick would do right now; clocks and saves nothing
 holded-tt clock install --dry-run            # see the unit files it would write
 holded-tt clock install                      # write them and enable the timer
 ```
@@ -31,9 +31,31 @@ Things worth knowing:
 Check it:
 
 ```bash
-systemctl --user list-timers                 # the armed next event shows as holded-tt-next-*
-journalctl --user -u 'holded-tt-*' -n 30
+holded-tt clock plan                         # today's plan, what is armed, when planning runs next
+systemctl --user list-timers                 # the same, as systemd sees it (holded-tt-next-*)
+journalctl --user -u 'holded-tt-*' -n 30     # what each run did
 ```
+
+## See the plan
+
+`holded-tt clock plan` is read-only: it reads `plan.json`, `skips.json` and what systemd has armed, and does not call Holded.
+
+```
+Tuesday 2026-11-03  active
+  in     08:13  done  (actual 08:23)
+  pause  14:12  next  armed for 14:12:38
+  resume 14:42  pending
+  out    17:33  pending
+net planned: 8h40  (08:23 -> 17:33)
+next planning: Wed 2026-11-04 08:00:00 CET
+skipped days: 2026-11-05
+```
+
+- **`next`** is the first event still to happen, with the second its timer will fire at. **`next planning`** is the daily timer.
+- **`actual`** is when you really clocked in, shown while it can be recovered from the plan (not after a late resume moved the clock-out).
+- A day that is not worked says why instead: `skipped: holiday ...`, `skipped: weekend`, `skipped: skipped by you`, or `missed: clock-in was planned for ...`.
+- **`warning: nothing is armed`** means the next event has no timer, so it will not happen until the next planning run. Run `holded-tt clock tick --schedule` to re-arm. It is not shown where systemd cannot be asked, and it is expected if you run `tick` from a periodic timer without `--schedule`.
+- The times of events already done are the planned ones; the real tracker is in `holded-tt clock status`, and `holded-tt track show --today` shows what Holded recorded.
 
 To remove it, `holded-tt clock uninstall` disables and deletes the units it generated and stops any armed timer. It leaves other files alone.
 
@@ -87,6 +109,7 @@ Run `clock tick` **without** `--schedule` from a timer every 5 minutes: a `launc
 
 ```bash
 holded-tt clock tick                      # advance today's plan once
+holded-tt clock plan                      # today's plan, the armed event, next planning (read-only)
 holded-tt clock tick --dry-run            # show what would happen; clock and save nothing
 holded-tt clock tick --schedule           # ...then arm a one-shot timer for the next event (Linux)
 holded-tt clock install [--plan-at HH:MM] [--dry-run]
