@@ -49,7 +49,7 @@ holded-tt clock plan
 holded-tt clock uninstall
 ```
 
-`install` creates one task, `\holded-tt\holded-tt-plan`, that runs `holded-tt clock tick --schedule` every weekday at 06:00 (`--plan-at HH:MM`) and at every logon, and is set to run a missed start as soon as possible. Each run arms a one-shot task `\holded-tt\holded-tt-next-<UTC time>` for the next event, exactly like the systemd timers, and these delete themselves an hour after they fire.
+`install` creates one task, `\holded-tt\holded-tt-plan`, that runs `holded-tt clock tick --schedule` every weekday at 06:00 (`--plan-at HH:MM`) and at every logon, and is set to run a missed start as soon as possible. Each run arms a one-shot task `\holded-tt\holded-tt-next-<UTC time>` for the next event, exactly like the systemd timers, and are set to expire an hour after they fire (the next run also deletes any that are over an hour old; the scheduler's own expiry cleanup has not been observed).
 
 - **It does not start a tick**, so nothing is clocked until the task's next trigger. Run `holded-tt clock tick --schedule` yourself to plan today.
 - **Runs only while you are logged on**, as you and without elevation. No password is stored, which is also why it cannot run with the session closed.
