@@ -88,7 +88,7 @@ def build_plan(
 
     sched = day_schedule(config, day)
     if config.jitter:
-        sched = jitter_schedule(*sched, config.jitter, config.max_extra)
+        sched = jitter_schedule(*sched, config.jitter, config.max_extra, config.max_pause_extra)
     start, end, pauses = sched
     in_at, out_at = hhmm_to_minutes(start), hhmm_to_minutes(end)
     return Plan(

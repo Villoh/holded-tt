@@ -22,6 +22,8 @@ class AppConfig:
     jitter: int = 0
     # Max extra minutes worked over the configured hours when jitter is on (the net-hours ceiling).
     max_extra: int = 15
+    # Max minutes a pause may last longer than configured when jitter is on (the day grows by the same).
+    max_pause_extra: int = 5
     # `clock tick`: skip today's clock-in if it is more than this many minutes late.
     max_late: int = 90
     pause: list[str] = field(default_factory=list)

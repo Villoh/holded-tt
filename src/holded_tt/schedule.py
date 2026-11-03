@@ -35,26 +35,42 @@ def day_schedule(
 
 
 def jitter_schedule(
-    start: str, end: str, pauses: tuple[str, ...], max_minutes: int, max_extra: int
+    start: str,
+    end: str,
+    pauses: tuple[str, ...],
+    max_minutes: int,
+    max_extra: int,
+    max_pause_extra: int = 0,
 ) -> tuple[str, str, tuple[str, ...]]:
-    """Randomise a day: start +-``max_minutes``, plus 0..``max_extra`` extra minutes worked.
+    """Randomise a day without touching its net hours beyond a ceiling.
 
-    The day keeps its configured length and gains a single random ``extra`` (never
-    negative), so net hours land between the configured ones and those plus
-    ``max_extra``. Pauses shift +-``max_minutes`` as a block, kept inside the day,
-    with their length unchanged.
+    * The start moves +-``max_minutes`` and the day gains 0..``max_extra`` extra minutes
+      worked, so net hours land between the configured ones and those plus ``max_extra``.
+    * Each pause starts +-``max_minutes`` from where it was (all pauses shift together) and
+      may last 0..``max_pause_extra`` minutes longer than configured. The day grows by the
+      same amount, so a longer lunch moves the end of the day and leaves the net alone.
+      Without it every pause would last exactly its configured length.
+    * Pauses never overlap, and everything stays inside 00:00-23:59.
     """
     s, e = hhmm_to_minutes(start), hhmm_to_minutes(end)
     last = 23 * 60 + 59
-    length = e - s + random.randint(0, max(0, min(max_extra, last - (e - s))))  # must fit before 23:59
+    base = e - s
+    windows = [tuple(map(hhmm_to_minutes, p.split("-"))) for p in pauses]
+    stretched: list[tuple[int, int]] = []
+    for i, (a, b) in enumerate(windows):
+        room = windows[i + 1][0] - b - 1 if i + 1 < len(windows) else last
+        grow = random.randint(0, max(0, min(max_pause_extra, room)))
+        stretched.append((a, b + grow))
+    grown = sum(b2 - b for (_, b2), (_, b) in zip(stretched, windows))
+    grown = min(grown, max(0, last - base))  # a near-24h day has no room to grow
+    length = base + grown + random.randint(0, max(0, min(max_extra, last - base - grown)))
     new_start = max(min(s + random.randint(-max_minutes, max_minutes), last - length), 0)
     new_end = new_start + length
-    windows = [tuple(map(hhmm_to_minutes, p.split("-"))) for p in pauses]
-    lo = max(-max_minutes, new_start - min((a for a, _ in windows), default=new_start))
-    hi = min(max_minutes, new_end - max((b for _, b in windows), default=new_end))
+    lo = max(-max_minutes, new_start - min((a for a, _ in stretched), default=new_start))
+    hi = min(max_minutes, new_end - max((b for _, b in stretched), default=new_end))
     shift = random.randint(lo, hi) if lo <= hi else 0
     return (
         fmt_minutes(new_start),
         fmt_minutes(new_end),
-        tuple(f"{fmt_minutes(a + shift)}-{fmt_minutes(b + shift)}" for a, b in windows),
+        tuple(f"{fmt_minutes(a + shift)}-{fmt_minutes(b + shift)}" for a, b in stretched),
     )

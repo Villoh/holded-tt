@@ -533,7 +533,7 @@ def track_command(
         s, e, pauses = day_schedule(config, day, start, end, explicit_pauses)
         sched = (s, e, tuple(_validate_pause(p) for p in pauses))
         max_jitter = config.jitter if jitter is None else jitter
-        return jitter_schedule(*sched, max_jitter, config.max_extra) if max_jitter else sched
+        return jitter_schedule(*sched, max_jitter, config.max_extra, config.max_pause_extra) if max_jitter else sched
 
     days = _resolve_track_days(
         state,
