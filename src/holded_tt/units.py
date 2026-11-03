@@ -26,6 +26,8 @@ TICK_TIMER = "holded-tt-tick.timer"
 FAILED_SERVICE = "holded-tt-failed.service"
 ARMED_PATTERN = "holded-tt-next-*"  # the one-shot units `--schedule` arms
 
+RETRIES_NATIVELY = True  # Restart=on-failure does the retrying
+
 RETRY_ATTEMPTS = 15  # 15 attempts, 2 minutes apart: about 30 minutes of retries
 RETRY_SECONDS = 120
 UNIT_RETRY = (

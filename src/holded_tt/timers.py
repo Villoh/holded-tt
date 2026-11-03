@@ -42,3 +42,8 @@ def next_planning() -> str | None:
 
 def disarm() -> None:
     backend().disarm()
+
+
+def retries_natively() -> bool:
+    """Does the scheduler itself retry a failed run? (systemd yes, Task Scheduler no.)"""
+    return bool(backend().RETRIES_NATIVELY)

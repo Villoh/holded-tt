@@ -8,11 +8,13 @@ from rich.text import Text
 
 from holded_tt.autoclock import (
     arm_next,
+    clear_failures,
     executable,
     load_plan,
     load_skips,
     next_event,
     plan_overview,
+    retry_later,
     run_tick,
     save_skips,
     skip_plan,
@@ -24,6 +26,7 @@ from holded_tt import timers
 from holded_tt.commands.track import _resolve_date_range, _timezone_for_day
 from holded_tt.console import get_output_console, render_error
 from holded_tt.errors import HoldedCliError, InputError
+from holded_tt.exit_codes import EXIT_NO_RETRY
 from holded_tt.holded_client import HoldedClient
 from holded_tt.state import AppState
 
@@ -243,8 +246,17 @@ def tick_command(
             when = arm_next(plan, now, executable())
             if when is not None:
                 lines.append(f"next event armed for {when:%H:%M:%S}")
+        if schedule and not dry_run:
+            clear_failures(state.config_dir / "failures.json")
     except HoldedCliError as error:
         render_error(error)
+        if schedule and not dry_run and error.exit_code != EXIT_NO_RETRY and not timers.retries_natively():
+            # This scheduler would not retry a failed run, so arm the retry ourselves.
+            try:
+                told = retry_later(state.config_dir / "failures.json", now, executable())
+            except HoldedCliError as exe_error:
+                told = f"could not arm a retry: {exe_error.message}"
+            typer.echo(told, err=True)
         raise typer.Exit(code=error.exit_code) from None
     for line in lines:
         typer.echo(f"{now:%Y-%m-%d %H:%M}  {line}")

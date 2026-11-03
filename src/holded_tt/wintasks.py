@@ -8,12 +8,12 @@ The same design as the systemd one (see units.py), expressed as scheduled tasks:
   next event. Like the systemd units, its name carries the time, so arming the same event
   twice reuses one task.
 
-Tasks are defined in XML, because ``schtasks`` flags cannot express several triggers,
-"run if a start was missed" or retries. They run as the current user, only while logged on
+Tasks are defined in XML, because ``schtasks`` flags cannot express several triggers or
+"run if a start was missed". They run as the current user, only while logged on
 (no password is stored).
 
-What systemd does that this does not: there is no ``OnFailure=`` alert, so a failed run only
-shows in the task history (and in `clock plan`'s warning when the next event is not armed).
+What systemd does natively and this does not: retries (the app re-arms them) and the
+``OnFailure=`` alert, so a failed run only shows in the task history (and in `clock plan`'s warning when the next event is not armed).
 """
 
 from __future__ import annotations
@@ -33,7 +33,12 @@ from xml.sax.saxutils import escape
 
 from holded_tt.errors import HoldedCliError
 from holded_tt.exit_codes import EXIT_NO_RETRY
-from holded_tt.units import RETRY_ATTEMPTS, RETRY_SECONDS, check_plan_time
+from holded_tt.units import check_plan_time
+
+# Task Scheduler's "restart on failure" does NOT restart a task whose program exits non-zero
+# (checked on a windows-latest runner: one run, Last Result 2, no restart in 5 minutes), so
+# `clock tick --schedule` re-arms its own retry instead. See autoclock.note_failure.
+RETRIES_NATIVELY = False
 
 FOLDER = "\\holded-tt"
 PLAN_TASK = f"{FOLDER}\\holded-tt-plan"
@@ -66,8 +71,6 @@ def _settings(expire: bool) -> str:
         "<StartWhenAvailable>true</StartWhenAvailable>"  # run a missed start as soon as possible
         "<AllowStartOnDemand>true</AllowStartOnDemand>"
         "<ExecutionTimeLimit>PT10M</ExecutionTimeLimit>"
-        f"<RestartOnFailure><Interval>{_duration(RETRY_SECONDS)}</Interval>"
-        f"<Count>{RETRY_ATTEMPTS}</Count></RestartOnFailure>"
         f"{delete}<Enabled>true</Enabled>"
     )
 

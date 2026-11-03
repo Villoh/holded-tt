@@ -24,6 +24,7 @@ from typing import Any
 from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError
 from holded_tt.exit_codes import EXIT_NO_RETRY
+from holded_tt.units import RETRY_ATTEMPTS, RETRY_SECONDS
 from holded_tt import timers
 from holded_tt.schedule import (
     day_schedule,
@@ -430,3 +431,37 @@ def plan_overview(
     if upcoming:
         out.append("skipped days: " + ", ".join(upcoming[:10]) + (" ..." if len(upcoming) > 10 else ""))
     return out
+
+
+def note_failure(path: Path, today: date) -> int:
+    """Count a failed scheduled run for today and return how many there have been."""
+    attempts = 0
+    try:
+        data = json.loads(path.read_text())
+        if data["date"] == today.isoformat():
+            attempts = int(data["attempts"])
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    attempts += 1
+    path.write_text(json.dumps({"date": today.isoformat(), "attempts": attempts}))
+    return attempts
+
+
+def clear_failures(path: Path) -> None:
+    path.unlink(missing_ok=True)
+
+
+def retry_later(path: Path, now: datetime, exe: str) -> str:
+    """After a failed scheduled run, arm a retry in RETRY_SECONDS. Returns what to tell the user.
+
+    For schedulers that do not retry by themselves. Gives up after RETRY_ATTEMPTS failures in
+    a day, like the systemd start limit; the next planning run starts afresh.
+    """
+    attempts = note_failure(path, now.date())
+    if attempts > RETRY_ATTEMPTS:
+        return f"giving up after {RETRY_ATTEMPTS} failed attempts today"
+    try:
+        timers.arm_at(now + timedelta(seconds=RETRY_SECONDS), exe)
+    except HoldedCliError as error:
+        return f"could not arm a retry: {error.message}"
+    return f"retrying in {RETRY_SECONDS // 60} min (attempt {attempts} of {RETRY_ATTEMPTS})"

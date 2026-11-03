@@ -141,24 +141,14 @@ def test_a_one_shot_task_fires_at_its_time_and_runs_the_executable(clean, tmp_pa
     assert marker.read_text().strip()
 
 
-def test_a_failing_task_is_retried_by_the_scheduler(clean, tmp_path) -> None:
-    """Exit code 2 must make Task Scheduler restart the task; the second run succeeds."""
-    marker = tmp_path / "runs.txt"
-    script = tmp_path / "flaky.cmd"
-    script.write_text(
-        "@echo off\r\n"
-        f'echo x>> "{marker}"\r\n'
-        f'for /f %%i in (\'type "{marker}" ^| find /c /v ""\') do set n=%%i\r\n'
-        "if %n% LSS 2 exit /b 2\r\n"
-        "exit /b 0\r\n"
-    )
-    when = (datetime.now(timezone.utc) + timedelta(seconds=45)).replace(microsecond=0)
+def test_the_scheduler_does_not_restart_a_failing_task_so_the_app_arms_its_own_retry(clean, tmp_path) -> None:
+    """What was measured: exit code 2 means one run and no restart. retry_later is the answer."""
+    from holded_tt.autoclock import retry_later
 
-    w.arm_at(when, str(script))
+    now = datetime.now(timezone.utc).replace(microsecond=0)
 
-    def runs() -> int:
-        return len(marker.read_text().split()) if marker.exists() else 0
+    told = retry_later(tmp_path / "failures.json", now, str(tmp_path / "x.cmd"))
 
-    assert _wait_for(lambda: runs() >= 2, 330, step=5), (
-        f"ran {runs()} time(s), expected a retry after the failure:\n" + _diagnose(w.next_task_name(when))
-    )
+    assert "retrying in 2 min (attempt 1 of 15)" in told
+    armed = w.armed_events() or []
+    assert any(timedelta(seconds=100) < t - now <= timedelta(seconds=125) for t in armed), armed

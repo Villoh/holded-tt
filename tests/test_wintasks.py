@@ -102,13 +102,14 @@ def test_tasks_run_the_scheduled_tick_as_this_user_without_a_stored_password() -
         assert text(principal, "RunLevel") == "LeastPrivilege"  # never elevated
 
 
-def test_tasks_retry_like_the_systemd_units() -> None:
-    root = parse(w.next_xml(datetime(2026, 11, 3, 14, 12, 38, tzinfo=CET), EXE))
-
-    restart = node(root, "Settings/RestartOnFailure")
-    assert text(restart, "Interval") == "PT2M"
-    assert text(restart, "Count") == str(units.RETRY_ATTEMPTS)
-    assert text(root, "Settings/StartWhenAvailable") == "true"
+def test_tasks_do_not_rely_on_restart_on_failure() -> None:
+    """Measured on a real windows-latest runner: a task whose program exits 2 is NOT restarted
+    by RestartOnFailure. The app re-arms its own retry instead (see autoclock.retry_later)."""
+    for xml in (w.plan_xml(EXE, "08:00"), w.next_xml(datetime(2026, 11, 3, 14, 12, 38, tzinfo=CET), EXE)):
+        root = parse(xml)
+        assert root.find(f"{NS}Settings/{NS}RestartOnFailure") is None
+        assert text(root, "Settings/StartWhenAvailable") == "true"  # a missed start still runs
+    assert w.RETRIES_NATIVELY is False and units.RETRIES_NATIVELY is True
 
 
 def test_one_shot_task_fires_at_the_exact_second_with_its_offset() -> None:
