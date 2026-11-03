@@ -217,8 +217,8 @@ def cli(monkeypatch, tmp_path):
     state = SimpleNamespace(config=AppConfig(timezone="UTC"), config_dir=tmp_path, session_store=object())
     monkeypatch.setattr(cli_module, "create_app_state", lambda: state)
     monkeypatch.setattr(clock, "_local_today", lambda _s: TODAY)
-    monkeypatch.setattr(clock.units, "armed_events", lambda *_a, **_k: [armed_at(14, 12, 38)])
-    monkeypatch.setattr(clock.units, "next_planning", lambda *_a, **_k: "Wed 2026-11-04 08:00:00 CET")
+    monkeypatch.setattr(clock.timers, "armed_events", lambda *_a, **_k: [armed_at(14, 12, 38)])
+    monkeypatch.setattr(clock.timers, "next_planning", lambda *_a, **_k: "Wed 2026-11-04 08:00:00 CET")
     return cli_module
 
 
@@ -245,7 +245,7 @@ def test_plan_command_is_read_only(runner, cli, tmp_path, monkeypatch) -> None:
     save_plan(tmp_path / "plan.json", plan(done=["in"]))
     before = (tmp_path / "plan.json").read_text()
     monkeypatch.setattr(clock, "HoldedClient", lambda *_: pytest.fail("must not call Holded"))
-    monkeypatch.setattr(clock.units, "disarm", lambda *_a, **_k: pytest.fail("must not stop timers"))
+    monkeypatch.setattr(clock.timers, "disarm", lambda *_a, **_k: pytest.fail("must not stop timers"))
 
     result = runner.invoke(cli.app, ["clock", "plan"])
 

@@ -24,7 +24,7 @@ from typing import Any
 from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError
 from holded_tt.exit_codes import EXIT_NO_RETRY
-from holded_tt.units import RETRY_PROPERTIES
+from holded_tt import timers
 from holded_tt.schedule import (
     day_schedule,
     fmt_minutes,
@@ -147,7 +147,7 @@ def executable() -> str:
     argv0 = os.path.abspath(sys.argv[0])
     if os.path.basename(argv0) == NIX_WRAPPED:
         argv0 = os.path.join(os.path.dirname(argv0), "holded-tt")
-    if os.path.basename(argv0) == "holded-tt":
+    if os.path.basename(argv0) in ("holded-tt", "holded-tt.exe"):
         if argv0.startswith(NIX_STORE):
             return _stable_alias(argv0) or argv0
         return argv0
@@ -164,7 +164,7 @@ def executable() -> str:
 def arm_next(
     plan: Plan, now: datetime, exe: str, run: Callable[..., Any] = subprocess.run
 ) -> datetime | None:
-    """Arm a one-shot systemd timer that runs `clock tick` at the next planned event.
+    """Arm a one-shot timer (systemd or Windows Task Scheduler) for the next planned event.
 
     Nothing stays running in between. The seconds are random but fixed per event, so
     arming the same event twice (a retry) reuses one unit instead of firing twice.
@@ -175,28 +175,7 @@ def arm_next(
     second = random.Random(f"{plan.date}-{minute}").randrange(60)
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     when = max(midnight + timedelta(minutes=minute, seconds=second), now + timedelta(seconds=5))
-    utc = when.astimezone(timezone.utc)
-    command = [
-        "systemd-run", "--user", "--quiet", "--collect",
-        f"--unit=holded-tt-next-{utc:%Y%m%dT%H%M%S}",
-        f"--on-calendar={utc:%Y-%m-%d %H:%M:%S} UTC",
-        "--timer-property=AccuracySec=1s",
-        *[f"--property={p}" for p in RETRY_PROPERTIES],
-        "--", exe, "clock", "tick", "--schedule",
-    ]
-    try:
-        done = run(command, capture_output=True, text=True)
-    except FileNotFoundError:
-        raise HoldedCliError(
-            message="systemd-run not found: --schedule needs systemd (Linux).",
-            hint="Run `holded-tt clock tick` from a periodic timer instead, without --schedule.",
-            exit_code=EXIT_NO_RETRY,
-        ) from None
-    if done.returncode and "already" not in done.stderr:  # "already loaded" = armed before
-        raise HoldedCliError(
-            message="Could not schedule the next clock event.",
-            hint=done.stderr.strip() or f"systemd-run exited with {done.returncode}.",
-        )
+    timers.arm_at(when, exe, run=run)
     return when
 
 

@@ -26,14 +26,16 @@ TICK_TIMER = "holded-tt-tick.timer"
 FAILED_SERVICE = "holded-tt-failed.service"
 ARMED_PATTERN = "holded-tt-next-*"  # the one-shot units `--schedule` arms
 
+RETRY_ATTEMPTS = 15  # 15 attempts, 2 minutes apart: about 30 minutes of retries
+RETRY_SECONDS = 120
 UNIT_RETRY = (
     f"OnFailure={FAILED_SERVICE}",
-    "StartLimitBurst=15",  # 15 attempts, 2 minutes apart: about 30 minutes of retries
+    f"StartLimitBurst={RETRY_ATTEMPTS}",
     "StartLimitIntervalSec=1h",
 )
 SERVICE_RETRY = (
     "Restart=on-failure",
-    "RestartSec=120",
+    f"RestartSec={RETRY_SECONDS}",
     f"RestartPreventExitStatus={EXIT_NO_RETRY}",  # a missed clock-in cannot be retried away
 )
 RETRY_PROPERTIES = UNIT_RETRY + SERVICE_RETRY
@@ -52,13 +54,47 @@ def _quote(arg: str) -> str:
     return f'"{arg}"' if " " in arg else arg
 
 
-def render_units(exe: str, plan_at: str = "06:00", notify: str | None = None) -> dict[str, str]:
-    """Unit file name -> text. ``notify`` is the absolute path of `notify-send`, if any."""
+def check_plan_time(plan_at: str) -> None:
     if not _HHMM.match(plan_at):
         raise InputError(
             message=f"Invalid time: {plan_at!r}.",
             hint="Use HH:MM, e.g. --plan-at 06:00.",
         )
+
+
+def arm_at(when: datetime, exe: str, run: Runner = subprocess.run) -> None:
+    """Arm a one-shot systemd timer that runs `exe clock tick --schedule` at ``when``.
+
+    The unit name is the UTC time, so arming the same event twice (a retry) reuses one
+    unit instead of firing twice.
+    """
+    utc = when.astimezone(timezone.utc)
+    command = [
+        "systemd-run", "--user", "--quiet", "--collect",
+        f"--unit=holded-tt-next-{utc:%Y%m%dT%H%M%S}",
+        f"--on-calendar={utc:%Y-%m-%d %H:%M:%S} UTC",
+        "--timer-property=AccuracySec=1s",
+        *[f"--property={p}" for p in RETRY_PROPERTIES],
+        "--", exe, "clock", "tick", "--schedule",
+    ]
+    try:
+        done = run(command, capture_output=True, text=True)
+    except FileNotFoundError:
+        raise HoldedCliError(
+            message="systemd-run not found: --schedule needs systemd (Linux) or the Windows Task Scheduler.",
+            hint="Run `holded-tt clock tick` from a periodic timer instead, without --schedule.",
+            exit_code=EXIT_NO_RETRY,
+        ) from None
+    if done.returncode and "already" not in done.stderr:  # "already loaded" = armed before
+        raise HoldedCliError(
+            message="Could not schedule the next clock event.",
+            hint=done.stderr.strip() or f"systemd-run exited with {done.returncode}.",
+        )
+
+
+def render_units(exe: str, plan_at: str = "06:00", notify: str | None = None) -> dict[str, str]:
+    """Unit file name -> text. ``notify`` is the absolute path of `notify-send`, if any."""
+    check_plan_time(plan_at)
     nl = "\n".join
     if notify:
         alert = f"{_quote(notify)} holded-tt \"clock tick failed, see: journalctl --user -u 'holded-tt-*'\""
