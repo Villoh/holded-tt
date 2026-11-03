@@ -17,7 +17,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 

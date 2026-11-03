@@ -105,3 +105,60 @@ def test_dry_run_creates_nothing(clean) -> None:
     w.install(EXE, "08:00", dry_run=True)
 
     assert not exists(w.PLAN_TASK)
+
+
+# ---------------------------------------------------------------------------
+# Does a task really fire, and does it really retry? These wait for the scheduler.
+# ---------------------------------------------------------------------------
+
+
+def _wait_for(predicate, seconds: int, step: float = 3.0) -> bool:
+    import time
+
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(step)
+    return predicate()
+
+
+def _diagnose(name: str) -> str:
+    done = subprocess.run(["schtasks", "/Query", "/TN", name, "/V", "/FO", "LIST"], capture_output=True, text=True)
+    return (done.stdout or done.stderr)[-1500:]
+
+
+def test_a_one_shot_task_fires_at_its_time_and_runs_the_executable(clean, tmp_path) -> None:
+    marker = tmp_path / "fired.txt"
+    script = tmp_path / "fire.cmd"
+    script.write_text(f'@echo off\r\necho %TIME%>> "{marker}"\r\nexit /b 0\r\n')
+    when = (datetime.now(timezone.utc) + timedelta(seconds=45)).replace(microsecond=0)
+
+    w.arm_at(when, str(script))
+
+    fired = _wait_for(marker.exists, 150)
+    assert fired, "the task never ran:\n" + _diagnose(w.next_task_name(when))
+    assert marker.read_text().strip()
+
+
+def test_a_failing_task_is_retried_by_the_scheduler(clean, tmp_path) -> None:
+    """Exit code 2 must make Task Scheduler restart the task; the second run succeeds."""
+    marker = tmp_path / "runs.txt"
+    script = tmp_path / "flaky.cmd"
+    script.write_text(
+        "@echo off\r\n"
+        f'echo x>> "{marker}"\r\n'
+        f'for /f %%i in (\'type "{marker}" ^| find /c /v ""\') do set n=%%i\r\n'
+        "if %n% LSS 2 exit /b 2\r\n"
+        "exit /b 0\r\n"
+    )
+    when = (datetime.now(timezone.utc) + timedelta(seconds=45)).replace(microsecond=0)
+
+    w.arm_at(when, str(script))
+
+    def runs() -> int:
+        return len(marker.read_text().split()) if marker.exists() else 0
+
+    assert _wait_for(lambda: runs() >= 2, 330, step=5), (
+        f"ran {runs()} time(s), expected a retry after the failure:\n" + _diagnose(w.next_task_name(when))
+    )
