@@ -27,6 +27,10 @@ packages = ["src/holded_tt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "real_backend: use the platform's real scheduler selection instead of forcing systemd",
+    "windows_tasks: runs against the real Windows Task Scheduler (opt in with HOLDED_TT_WINDOWS_TASKS=1)",
+]
 pythonpath = ["src"]
 
 [tool.ruff]

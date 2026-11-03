@@ -74,6 +74,9 @@ jobs:
 
       - name: Run tests
         run: uv run python -m pytest
+        env:
+          # Only Windows runs the tests that talk to the real Task Scheduler.
+          HOLDED_TT_WINDOWS_TASKS: ${{ matrix.os == 'windows-latest' && '1' || '' }}
 
   package:
     name: Package smoke test

@@ -6,12 +6,13 @@ import importlib
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from holded_tt import autoclock, units
+from holded_tt import units
 from holded_tt.errors import HoldedCliError, InputError
 
 EXE = "/etc/profiles/per-user/me/bin/holded-tt"
@@ -68,10 +69,14 @@ def test_service_runs_tick_with_schedule_and_hooks_into_login() -> None:
 def test_service_and_armed_timers_share_one_retry_policy() -> None:
     """The generated service and every timer arm_next creates must retry the same way."""
     service = lines(units.render_units(EXE)[units.TICK_SERVICE])
+    run = FakeRun()
 
-    assert autoclock.RETRY_PROPERTIES is units.RETRY_PROPERTIES
+    units.arm_at(datetime(2026, 4, 7, 14, 0, tzinfo=timezone.utc), EXE, run)
+
+    armed = run.calls[0]
     for prop in units.RETRY_PROPERTIES:
-        assert prop in service
+        assert prop in service  # the generated service
+        assert f"--property={prop}" in armed  # and every timer that --schedule arms
 
 
 def test_missed_clock_in_is_never_retried() -> None:
@@ -275,9 +280,9 @@ def _cli(monkeypatch, install=None, uninstall=None, exe=EXE):
     monkeypatch.setattr(cli, "create_app_state", lambda: SimpleNamespace())
     monkeypatch.setattr(clock, "executable", lambda: exe)
     if install:
-        monkeypatch.setattr(clock.units, "install", install)
+        monkeypatch.setattr(clock.timers, "install", install)
     if uninstall:
-        monkeypatch.setattr(clock.units, "uninstall", uninstall)
+        monkeypatch.setattr(clock.timers, "uninstall", uninstall)
     return cli
 
 

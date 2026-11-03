@@ -234,7 +234,7 @@ def cli(monkeypatch, tmp_path):
     monkeypatch.setattr(cli_module, "create_app_state", lambda: state)
     monkeypatch.setattr(clock, "_local_today", lambda _state: TODAY)
     disarmed = []
-    monkeypatch.setattr(clock.units, "disarm", lambda *_a, **_k: disarmed.append(True))
+    monkeypatch.setattr(clock.timers, "disarm", lambda *_a, **_k: disarmed.append(True))
     cli_module.disarmed = disarmed  # type: ignore[attr-defined]
     return cli_module
 

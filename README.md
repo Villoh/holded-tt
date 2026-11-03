@@ -65,7 +65,7 @@ holded-tt track --from 2026-01-07 --to 2026-04-07 --dry-run
 holded-tt track --from 2026-01-07 --to 2026-04-07
 ```
 
-To have your days clocked for you (on Linux), run `holded-tt clock install` once. See [Automatic clocking](https://github.com/Villoh/holded-tt/blob/main/docs/automation.md).
+To have your days clocked for you (Linux or Windows), run `holded-tt clock install` once. See [Automatic clocking](https://github.com/Villoh/holded-tt/blob/main/docs/automation.md).
 
 ## Documentation
 
@@ -75,7 +75,7 @@ To have your days clocked for you (on Linux), run `holded-tt clock install` once
 | [Configuration](https://github.com/Villoh/holded-tt/blob/main/docs/configuration.md) | `config`, every default and per-weekday overrides, where files are stored |
 | [Track](https://github.com/Villoh/holded-tt/blob/main/docs/track.md) | Register, inspect and update days in bulk, with jitter |
 | [Clock](https://github.com/Villoh/holded-tt/blob/main/docs/clock.md) | Real-time clock-in, clock-out, pause and resume |
-| [Automatic clocking](https://github.com/Villoh/holded-tt/blob/main/docs/automation.md) | `clock tick`, `clock install`, `clock skip`, the systemd units, retries and failure handling |
+| [Automatic clocking](https://github.com/Villoh/holded-tt/blob/main/docs/automation.md) | `clock tick`, `clock install`, `clock skip`, the systemd units and Windows task, retries and failure handling |
 | [Time off](https://github.com/Villoh/holded-tt/blob/main/docs/timeoff.md) | Vacation availability, requests and holidays |
 | [Export](https://github.com/Villoh/holded-tt/blob/main/docs/export.md) | PDF and Excel reports |
 | [Development](https://github.com/Villoh/holded-tt/blob/main/docs/development.md) | Running from source, tests |

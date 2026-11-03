@@ -38,3 +38,16 @@ def temp_config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         sys.modules.pop(module_name, None)
 
     return config_dir
+
+
+@pytest.fixture(autouse=True)
+def _systemd_backend(request, monkeypatch):
+    """Tests written for systemd must not switch backend on a Windows CI runner.
+
+    Mark a test `@pytest.mark.real_backend` to exercise the platform selection itself.
+    """
+    if request.node.get_closest_marker("real_backend"):
+        return
+    from holded_tt import timers, units
+
+    monkeypatch.setattr(timers, "backend", lambda: units)
