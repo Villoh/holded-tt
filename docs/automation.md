@@ -60,7 +60,7 @@ A tick also obeys the list on its own, so a timer that was somehow not stopped s
 - **Skips** weekends, workplace holidays and accepted time off, without touching the tracker.
 - **Quiet:** with nothing due it prints nothing and makes no API call.
 - **Resilient:** every step checks the real tracker in Holded first, so a missed run, a reboot or a tracker you started by hand never causes a duplicate. If you clock in by hand, the plan adopts your real start time.
-- **Net hours hold:** a late clock-in (machine switched on late) or a late resume pushes the clock-out back by the same amount, so the day never nets less than the configured hours. Within `max_late` this holds for any jitter.
+- **Net hours hold:** a late clock-in (machine switched on late) or a late resume pushes the clock-out back by the same amount, so the day never nets less than the configured hours. With jitter on, a day nets between the configured hours and those plus `defaults.max_extra` minutes (default 15). If you clock in by hand, the day keeps its planned length from your real start, so an early manual clock-in does not make it longer.
 - **Too late:** if the clock-in is more than `max_late` minutes after plan (default 90, `holded-tt config set defaults.max_late <minutes>`), the day is dropped, `tick` exits with code 3 once, and the rest of the plan is cancelled. Clock in by hand if you still want the day.
 - **A tracker left open from a previous day** blocks `tick` (exit 2) until you close it.
 - **Clock-out is never skipped:** if you were away at the planned time it happens as soon as `tick` runs again.

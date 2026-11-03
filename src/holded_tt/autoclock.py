@@ -87,7 +87,7 @@ def build_plan(
 
     sched = day_schedule(config, day)
     if config.jitter:
-        sched = jitter_schedule(*sched, config.jitter)
+        sched = jitter_schedule(*sched, config.jitter, config.max_extra)
     start, end, pauses = sched
     in_at, out_at = hhmm_to_minutes(start), hhmm_to_minutes(end)
     return Plan(
@@ -227,7 +227,7 @@ def step(plan: Plan, now: int, tracker: Tracker, max_late: int) -> list[str]:
             acts.append("in")
             state, real = "running", now
         plan.done.append("in")
-        plan.out_at = max(plan.out_at, real + plan.duration)
+        plan.out_at = real + plan.duration  # same length from the real start, so net hours hold
 
     for i, (a, b) in enumerate(plan.pauses):
         p, r = f"p{i}", f"r{i}"

@@ -35,7 +35,7 @@ Notes:
 - `holded-tt track --today` uses your configured defaults (`workplace_id`, `start`, `end`, `timezone`, `pause`) and still skips weekends and holidays unless you opt in with `--include-weekends` or `--include-holidays`.
 - `--pause` is repeatable and must use `HH:MM-HH:MM` format.
 - Submissions larger than 10 resulting days require confirmation unless you pass `--yes`.
-- `--jitter N` (or `defaults.jitter`) randomises each day's start, end and pause by up to `N` minutes so entries are not identical every day. Start and end move in either direction, but net worked hours never drop below the configured schedule: a later start forces an equally later end. Pauses keep their length and stay inside the day. The override flag wins over the config value, and `--jitter 0` turns it off. Because every day gets its own schedule, `track` sends one batch per day when jitter is on.
+- `--jitter N` (or `defaults.jitter`) randomises each day's start, end and pause by up to `N` minutes so entries are not identical every day. The day keeps its configured length plus a random extra of 0 to `defaults.max_extra` minutes (default 15), so net hours land between the configured ones and those plus `max_extra`: with 8h30 configured and the defaults, every day nets between 8h30 and 8h45. Start moves in either direction and the end follows it. Pauses keep their length and stay inside the day. The override flag wins over the config value, and `--jitter 0` turns it off. Because every day gets its own schedule, `track` sends one batch per day when jitter is on.
 - `--dry-run` does not fetch holidays from Holded. Preview mode skips live holiday filtering to avoid requiring a session just to inspect the date range.
 
 Subcommands:

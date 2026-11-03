@@ -184,12 +184,12 @@ def test_personal_time_off_only_skips_accepted_days_it_covers(absence, skipped) 
     assert (plan.status == "skipped") is skipped
 
 
-def test_jitter_plan_keeps_net_hours() -> None:
+def test_jitter_plan_keeps_net_hours_between_the_minimum_and_the_ceiling() -> None:
     for seed in range(200):
         random.seed(seed)
-        plan = build_plan(cfg(jitter=20), TUE, lambda _y: {})
+        plan = build_plan(cfg(jitter=20, max_extra=15), TUE, lambda _y: {})
         paused = sum(b - a for a, b in plan.pauses)
-        assert plan.duration - paused >= 8 * H + 30
+        assert 8 * H + 30 <= plan.duration - paused <= 8 * H + 45
         assert plan.out_at - plan.in_at == plan.duration
 
 
@@ -234,12 +234,13 @@ def test_step_adopts_a_tracker_started_by_hand() -> None:
     assert plan.out_at == hm("09:12") + 9 * H  # keeps the planned duration from the real start
 
 
-def test_step_manual_early_in_never_shortens_the_day() -> None:
+def test_step_manual_early_in_moves_the_out_with_it_so_the_day_is_not_longer() -> None:
+    """Clocking in by hand at 07:50 must not turn a 9h day into 9h40."""
     plan = plan_for()
 
     step(plan, hm("08:30"), Tracker("running", hm("07:50")), 90)
 
-    assert plan.out_at == hm("17:30")
+    assert plan.out_at == hm("07:50") + 9 * H
 
 
 def test_step_pause_and_resume_in_order() -> None:
@@ -441,7 +442,9 @@ def test_dry_run_acts_on_nothing_and_saves_nothing(tmp_path) -> None:
 @pytest.mark.parametrize("seed", range(150))
 def test_net_hours_hold_for_any_jitter_and_boot_time(tmp_path, seed) -> None:
     """The guarantee: whatever the jitter and whenever the machine wakes (within
-    the limit), a Tue-Thu day never nets less than 8h30."""
+    the limit), a Tue-Thu day never nets less than 8h30 nor more than 15 minutes over
+    it. This simulation ticks every 5 minutes, which can add up to 5 more at the
+    pause start and 5 at the clock-out; real timers fire at the planned second."""
     rng = random.Random(seed)
     random.seed(seed)
     client = FakeHolded()
@@ -451,7 +454,7 @@ def test_net_hours_hold_for_any_jitter_and_boot_time(tmp_path, seed) -> None:
 
     assert not errors
     assert client.tracker is None
-    assert client.worked >= 8 * H + 30
+    assert 8 * H + 30 <= client.worked <= 8 * H + 30 + 15 + 10
 
 
 @pytest.mark.parametrize("seed", range(50))
@@ -461,7 +464,7 @@ def test_friday_net_hours_hold_with_jitter(tmp_path, seed) -> None:
 
     _, errors = simulate(client, cfg(jitter=20), tmp_path / "plan.json", hm("06:00"))
 
-    assert not errors and client.worked >= 6 * H + 30
+    assert not errors and 6 * H + 30 <= client.worked <= 6 * H + 30 + 15 + 5  # no pause: 5 for the out tick
 
 
 # ---------------------------------------------------------------------------
