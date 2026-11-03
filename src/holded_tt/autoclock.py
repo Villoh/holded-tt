@@ -391,3 +391,63 @@ def _describe(plan: Plan) -> str:
     return f"{fmt_minutes(plan.in_at)} -> {fmt_minutes(plan.out_at)}" + (
         f", pause {pauses}" if pauses else ""
     )
+
+
+def plan_overview(
+    plan: Plan | None,
+    today: date,
+    skips: frozenset[date],
+    armed: list[datetime] | None,
+    tz: Any,
+    next_plan_run: str | None = None,
+) -> list[str]:
+    """Human-readable view of today's plan. Read-only; ``armed`` None means "unknown"."""
+    out: list[str] = []
+    if plan is None or plan.date != today.isoformat():
+        out.append(f"{today:%A %Y-%m-%d}  no plan yet")
+        out.append(
+            "  it is made by the daily timer or the first run today"
+            + (f" (last plan: {plan.date})" if plan else "")
+        )
+    elif plan.status != "active":
+        out.append(f"{today:%A %Y-%m-%d}  {plan.status}: {plan.reason}")
+    else:
+        out.append(f"{today:%A %Y-%m-%d}  active")
+        pending_at = _next_due(plan)
+        todays_armed = [a.astimezone(tz) for a in armed or [] if a.astimezone(tz).date() == today]
+        # out_at = real clock-in + duration until a late resume pushes it back, after which
+        # the real clock-in can no longer be recovered from the plan.
+        resumed = any(k.startswith("r") for k in plan.done)
+        real_in = plan.out_at - plan.duration if "in" in plan.done and not resumed else None
+        events = [("in", "in", plan.in_at)]
+        for i, (a, b) in enumerate(plan.pauses):
+            events += [(f"p{i}", "pause", a), (f"r{i}", "resume", b)]
+        events.append(("out", "out", plan.out_at))
+        shown_next = False
+        for key, label, minute in events:
+            if key in plan.done:
+                note = "done"
+                if key == "in" and real_in is not None and real_in != minute:
+                    note += f"  (actual {fmt_minutes(real_in)})"
+            elif minute == pending_at and not shown_next:
+                shown_next = True
+                note = "next"
+                if todays_armed:
+                    note += f"  armed for {todays_armed[0]:%H:%M:%S}"
+            else:
+                note = "pending"
+            out.append(f"  {label:<7}{fmt_minutes(minute)}  {note}")
+        paused = sum(b - a for a, b in plan.pauses)
+        net = plan.duration - paused
+        out.append(f"net planned: {net // 60}h{net % 60:02d}  ({fmt_minutes(real_in if real_in is not None else plan.in_at)} -> {fmt_minutes(plan.out_at)})")
+        if shown_next and armed is not None and not todays_armed:
+            out.append(
+                "warning: nothing is armed for the next event, so it will not happen "
+                "until the next planning run. Run `holded-tt clock tick --schedule` to re-arm."
+            )
+    if next_plan_run:
+        out.append(f"next planning: {next_plan_run}")
+    upcoming = sorted(d.isoformat() for d in skips if d >= today)
+    if upcoming:
+        out.append("skipped days: " + ", ".join(upcoming[:10]) + (" ..." if len(upcoming) > 10 else ""))
+    return out

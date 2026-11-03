@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -117,6 +118,42 @@ def _systemctl(run: Runner, *args: str, check: bool = True) -> None:
             message=f"systemctl --user {' '.join(args)} failed.",
             hint=done.stderr.strip() or f"exit status {done.returncode}",
         )
+
+
+_ARMED_NAME = re.compile(r"holded-tt-next-(\d{8}T\d{6})\.timer")
+
+
+def armed_events(run: Runner = subprocess.run) -> list[datetime] | None:
+    """When each armed one-shot timer fires (UTC, read from the unit name).
+
+    None when systemd cannot be asked (no systemctl, or it failed): "unknown", not "none".
+    """
+    systemctl = shutil.which("systemctl")
+    if systemctl is None:
+        return None
+    done = run(
+        [systemctl, "--user", "list-units", "--all", "--no-legend", "--plain",
+         "--type=timer", ARMED_PATTERN + ".timer"],
+        capture_output=True, text=True,
+    )
+    if done.returncode:
+        return None
+    return sorted(
+        datetime.strptime(m.group(1), "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+        for m in _ARMED_NAME.finditer(done.stdout)
+    )
+
+
+def next_planning(run: Runner = subprocess.run) -> str | None:
+    """When the daily timer fires next, as systemd prints it. None if unknown."""
+    systemctl = shutil.which("systemctl")
+    if systemctl is None:
+        return None
+    done = run(
+        [systemctl, "--user", "show", TICK_TIMER, "-p", "NextElapseUSecRealtime", "--value"],
+        capture_output=True, text=True,
+    )
+    return (done.stdout or "").strip() or None if not done.returncode else None
 
 
 def disarm(run: Runner = subprocess.run) -> None:
