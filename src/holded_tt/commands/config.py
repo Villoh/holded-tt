@@ -25,8 +25,9 @@ ALLOWED_CONFIG_KEYS = {
     "defaults.jitter": "jitter",
     "defaults.max_late": "max_late",
     "defaults.max_extra": "max_extra",
+    "defaults.max_pause_extra": "max_pause_extra",
 }
-INT_KEYS = {"defaults.jitter", "defaults.max_late", "defaults.max_extra"}
+INT_KEYS = {"defaults.jitter", "defaults.max_late", "defaults.max_extra", "defaults.max_pause_extra"}
 DAY_FIELDS = ("start", "end", "pause")
 
 
@@ -91,6 +92,7 @@ def show_command(ctx: typer.Context) -> None:
     grid.add_row("jitter", f"{state.config.jitter} min")
     grid.add_row("max_late", f"{state.config.max_late} min")
     grid.add_row("max_extra", f"{state.config.max_extra} min")
+    grid.add_row("max_pause_extra", f"{state.config.max_pause_extra} min")
     grid.add_row("pause", ", ".join(state.config.pause) or "[dim]—[/dim]")
     for day in WEEKDAYS:
         for field_name, field_value in state.config.days.get(day, {}).items():
@@ -126,6 +128,7 @@ def set_command(
             "  defaults.jitter         Max random minutes on start/end/pause (0 = off)\n\n"
             "  defaults.max_late       `clock tick` skips a clock-in later than this (minutes)\n\n"
             "  defaults.max_extra      Max extra minutes worked over the schedule with jitter on\n\n"
+            "  defaults.max_pause_extra  Max minutes a pause may last longer than set, jitter on\n\n"
             "  defaults.<day>.<field>  Per-weekday override. day: mon..sun,\n"
             "                          field: start, end or pause"
         ),
