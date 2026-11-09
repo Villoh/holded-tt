@@ -1637,23 +1637,24 @@ def test_track_delete_removes_only_requested_tracker(
     assert calls == [("delete", ["trk-2"]), ("delete", ["trk-1", "trk-2"])]
 
 
-def test_track_delete_range_deletes_every_tracker_in_range(
+def test_track_delete_range_skips_weekends_unless_included(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
     cli_module = importlib.import_module("holded_tt.cli")
     fake_state = _fake_state_with_files(tmp_path, monkeypatch)
     calls: list = []
     data = [
-        {"date": "2026-04-04", "trackers": [{"id": "sat"}]},  # weekend: not filtered
+        {"date": "2026-04-04", "trackers": [{"id": "sat"}]},
         {"date": "2026-04-06", "trackers": [{"id": "mon-1"}, {"id": "mon-2"}]},
         {"date": "2026-04-07", "trackers": []},
     ]
     _patch_client(monkeypatch, cli_module, fake_state, calls=calls, timetracking_data=data)
+    args = ["track", "delete", "--from", "2026-04-04", "--to", "2026-04-07", "--yes"]
 
-    result = runner.invoke(
-        cli_module.app,
-        ["track", "delete", "--from", "2026-04-04", "--to", "2026-04-07", "--yes"],
-    )
+    assert runner.invoke(cli_module.app, args).exit_code == 0
+    assert runner.invoke(cli_module.app, args + ["--include-weekends"]).exit_code == 0
 
-    assert result.exit_code == 0
-    assert calls == [("delete", ["sat", "mon-1", "mon-2"])]
+    assert calls == [
+        ("delete", ["mon-1", "mon-2"]),
+        ("delete", ["sat", "mon-1", "mon-2"]),
+    ]

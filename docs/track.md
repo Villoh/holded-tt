@@ -51,8 +51,9 @@ holded-tt track show --from 2026-04-07 --to 2026-04-10
 holded-tt track delete --date 2026-04-10
 holded-tt track delete --date 2026-04-10 --tracker-id <tracker_id>
 
-# Delete everything tracked in a range (weekends and holidays are NOT filtered)
+# Delete a range (skips weekends and holidays unless you include them)
 holded-tt track delete --from 2026-04-07 --to 2026-04-10
+holded-tt track delete --from 2026-04-07 --to 2026-04-10 --include-weekends --include-holidays
 
 # Update a date range, one existing tracker per day
 holded-tt track update --from 2026-04-07 --to 2026-04-10 --end 17:00

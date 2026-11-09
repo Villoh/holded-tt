@@ -56,7 +56,9 @@ Examples:
   holded-tt track delete --from 2026-04-07 --to 2026-04-10
   holded-tt track delete --date 2026-04-10 --tracker-id <tracker_id>
 
-Weekends and holidays are not filtered: whatever is tracked in the range goes.
+Range deletes skip weekends and workplace holidays by default, like `track`; use
+--include-weekends / --include-holidays to delete those too. A single day
+(--date/--today) is never filtered.
 """
 
 _PAUSE_RE = re.compile(r"^\d{2}:\d{2}-\d{2}:\d{2}$")
@@ -679,6 +681,12 @@ def track_delete_command(
     tracker_id: Optional[str] = typer.Option(
         None, "--tracker-id", help="Delete only this tracker."
     ),
+    include_weekends: bool = typer.Option(
+        False, "--include-weekends", help="Include Saturday and Sunday."
+    ),
+    include_holidays: bool = typer.Option(
+        False, "--include-holidays", help="Include workplace holidays."
+    ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation."),
 ) -> None:
     """Delete the trackers of one day, or a single tracker."""
@@ -692,9 +700,25 @@ def track_delete_command(
         else:
             first, last = _resolve_date_range(from_date, to_date, today)
             label = str(first) if first == last else f"{first} -> {last}"
-            entries = client.get_timetracking_data(
-                first, last, state.config.timezone, exclude_rejected=False
-            )
+            keep = {
+                d.isoformat()
+                for d in _resolve_track_days(
+                    state,
+                    first,
+                    last,
+                    state.config.workplace_id,
+                    dry_run=False,
+                    include_weekends=include_weekends,
+                    include_holidays=include_holidays,
+                )
+            }
+            entries = [
+                e
+                for e in client.get_timetracking_data(
+                    first, last, state.config.timezone, exclude_rejected=False
+                )
+                if e.get("date") in keep
+            ]
         trackers = [t for e in entries for t in e.get("trackers", [])]
         if tracker_id:
             trackers = [t for t in trackers if t.get("id") == tracker_id]
@@ -1037,6 +1061,12 @@ def track_delete_entrypoint(
     tracker_id: Optional[str] = typer.Option(
         None, "--tracker-id", help="Delete only this tracker."
     ),
+    include_weekends: bool = typer.Option(
+        False, "--include-weekends", help="Include Saturday and Sunday."
+    ),
+    include_holidays: bool = typer.Option(
+        False, "--include-holidays", help="Include workplace holidays."
+    ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation."),
 ) -> None:
     _run_with_cli_error_handling(
@@ -1047,5 +1077,7 @@ def track_delete_entrypoint(
         to_date=to_date,
         today=today,
         tracker_id=tracker_id,
+        include_weekends=include_weekends,
+        include_holidays=include_holidays,
         yes=yes,
     )
