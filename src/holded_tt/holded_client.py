@@ -313,6 +313,22 @@ class HoldedClient:
                 hint="Check the selected days and try again.",
             ) from exc
 
+    def delete_trackers(self, ids: list[str]) -> None:
+        """Delete trackers by ID. Returns None on 204."""
+        response = self._post(
+            "/internal/team/v2/bulk-timetracking-delete", json={"ids": ids}
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            from holded_tt.holded_client import HoldedApiError
+
+            body = exc.response.text[:300].strip()
+            raise HoldedApiError(
+                message=f"Delete failed (HTTP {exc.response.status_code}): {body}",
+                hint="Check the tracker IDs with `holded-tt track show`.",
+            ) from exc
+
     # --- Internal helpers ---
 
     def _get(self, path: str, **kwargs: Any) -> httpx.Response:

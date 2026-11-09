@@ -349,6 +349,9 @@ def _patch_client(
         def update_bulk_timetracking(self, payload):
             calls.append(("update", payload))
 
+        def delete_trackers(self, ids):
+            calls.append(("delete", ids))
+
     monkeypatch.setattr(cli_module, "create_app_state", lambda: fake_state)
     monkeypatch.setattr(track_module, "HoldedClient", lambda *_: FakeClient())
 
@@ -1616,3 +1619,42 @@ def test_track_dry_run_uses_weekday_overrides(
     assert result.exit_code == 0
     assert "08:30 → 17:30  ·  pause 14:00-14:30  ·  4 day(s)" in result.stdout
     assert "08:30 → 15:00  ·  pause 14:00-14:30  ·  1 day(s)" in result.stdout
+
+
+def test_track_delete_removes_only_requested_tracker(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_tt.cli")
+    fake_state = _fake_state_with_files(tmp_path, monkeypatch)
+    calls: list = []
+    day_data = {"trackers": [{"id": "trk-1"}, {"id": "trk-2"}]}
+    _patch_client(monkeypatch, cli_module, fake_state, calls=calls, day_data=day_data)
+
+    args = ["track", "delete", "--date", "2026-04-07", "--yes"]
+    assert runner.invoke(cli_module.app, args + ["--tracker-id", "trk-2"]).exit_code == 0
+    assert runner.invoke(cli_module.app, args).exit_code == 0
+
+    assert calls == [("delete", ["trk-2"]), ("delete", ["trk-1", "trk-2"])]
+
+
+def test_track_delete_range_skips_weekends_unless_included(
+    tmp_path: Path, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_tt.cli")
+    fake_state = _fake_state_with_files(tmp_path, monkeypatch)
+    calls: list = []
+    data = [
+        {"date": "2026-04-04", "trackers": [{"id": "sat"}]},
+        {"date": "2026-04-06", "trackers": [{"id": "mon-1"}, {"id": "mon-2"}]},
+        {"date": "2026-04-07", "trackers": []},
+    ]
+    _patch_client(monkeypatch, cli_module, fake_state, calls=calls, timetracking_data=data)
+    args = ["track", "delete", "--from", "2026-04-04", "--to", "2026-04-07", "--yes"]
+
+    assert runner.invoke(cli_module.app, args).exit_code == 0
+    assert runner.invoke(cli_module.app, args + ["--include-weekends"]).exit_code == 0
+
+    assert calls == [
+        ("delete", ["mon-1", "mon-2"]),
+        ("delete", ["sat", "mon-1", "mon-2"]),
+    ]

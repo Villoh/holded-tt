@@ -106,6 +106,7 @@ def test_track_help_includes_usage_example(runner) -> None:
     assert "holded-tt track --from 2026-04-01 --to 2026-04-30" in output
     assert "show" in output
     assert "update" in output
+    assert "delete" in output
 
 
 def test_config_help_lists_show_and_set(runner) -> None:
