@@ -47,6 +47,13 @@ holded-tt track show --date 2026-04-10
 # Inspect a date range
 holded-tt track show --from 2026-04-07 --to 2026-04-10
 
+# Delete every tracker of a day, or just one (asks for confirmation; -y skips it)
+holded-tt track delete --date 2026-04-10
+holded-tt track delete --date 2026-04-10 --tracker-id <tracker_id>
+
+# Delete everything tracked in a range (weekends and holidays are NOT filtered)
+holded-tt track delete --from 2026-04-07 --to 2026-04-10
+
 # Update a date range, one existing tracker per day
 holded-tt track update --from 2026-04-07 --to 2026-04-10 --end 17:00
 
