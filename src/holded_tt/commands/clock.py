@@ -384,10 +384,14 @@ def skip_command(
 
 @app.command("install")
 def install_command(
-    plan_at: str = typer.Option(
-        "06:00",
+    ctx: typer.Context,
+    plan_at: Optional[str] = typer.Option(
+        None,
         "--plan-at",
-        help="Time (HH:MM, Mon-Fri) the day is planned. Must be before your earliest clock-in.",
+        help=(
+            "Time (HH:MM, Mon-Fri) the day is planned, default defaults.plan_at (06:00). "
+            "Must be before your earliest clock-in."
+        ),
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Print the unit files and commands without writing or running anything."
@@ -402,7 +406,7 @@ def install_command(
     """
     try:
         exe = executable()
-        lines = timers.install(exe, plan_at, dry_run)
+        lines = timers.install(exe, plan_at or _get_state(ctx).config.plan_at, dry_run)
     except HoldedCliError as error:
         render_error(error)
         raise typer.Exit(code=error.exit_code) from None

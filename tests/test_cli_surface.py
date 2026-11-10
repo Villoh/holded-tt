@@ -199,6 +199,20 @@ def test_config_set_persists_pause_defaults(temp_config_dir, runner, monkeypatch
     assert config_module.load_config().pause == ["14:00-14:30", "17:00-17:15"]
 
 
+def test_config_set_plan_at_persists_a_valid_time_and_rejects_a_bad_one(
+    temp_config_dir, runner, monkeypatch
+) -> None:
+    cli_module = importlib.import_module("holded_tt.cli")
+    config_module = importlib.import_module("holded_tt.config")
+    _patch_runtime_files(temp_config_dir, monkeypatch)
+
+    good = runner.invoke(cli_module.app, ["config", "set", "defaults.plan_at", "08:00"])
+    bad = runner.invoke(cli_module.app, ["config", "set", "defaults.plan_at", "25:00"])
+
+    assert good.exit_code == 0 and bad.exit_code == 1 and "Invalid time" in bad.stderr
+    assert config_module.load_config().plan_at == "08:00"  # the bad value did not overwrite it
+
+
 def test_config_set_rejects_unknown_keys_with_friendly_error(
     temp_config_dir, runner, monkeypatch
 ) -> None:

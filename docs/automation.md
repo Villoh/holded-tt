@@ -20,7 +20,7 @@ holded-tt clock install                      # write them and enable the timer
 
 | Unit | What it does |
 |---|---|
-| `holded-tt-tick.timer` | Every weekday at 06:00 (`--plan-at HH:MM` to change it) runs the service. `Persistent=true` runs it right after boot if the machine was off at that time. |
+| `holded-tt-tick.timer` | Every weekday at 06:00 (`holded-tt config set defaults.plan_at HH:MM` and reinstall to change it, or `--plan-at HH:MM` once) runs the service. `Persistent=true` runs it right after boot if the machine was off at that time. |
 | `holded-tt-tick.service` | Runs `holded-tt clock tick --schedule`. Also started when your user manager starts (boot or login), which re-arms the chain after a reboot. |
 | `holded-tt-failed.service` | The alert, run when a tick fails: `notify-send` if you have it, else a line in the journal. Limited to one alert per hour. |
 
