@@ -98,10 +98,13 @@ def render_units(exe: str, plan_at: str = "06:00", notify: str | None = None) ->
     """Unit file name -> text. ``notify`` is the absolute path of `notify-send`, if any."""
     check_plan_time(plan_at)
     nl = "\n".join
+    sh = shutil.which("sh") or "/bin/sh"
+    # A user unit cannot order after the system's network-online.target, so at boot the
+    # first tick ran before DNS was up. Wait up to ~60 s; the leading '-' lets tick run anyway.
+    wait_net = f"-{_quote(sh)} -c 'for i in $(seq 30); do getent hosts app.holded.com >/dev/null && exit 0; sleep 2; done'"
     if notify:
         alert = f"{_quote(notify)} holded-tt \"clock tick failed, see: journalctl --user -u 'holded-tt-*'\""
     else:  # no desktop notifier: at least leave a line in the journal
-        sh = shutil.which("sh") or "/bin/sh"
         alert = f"{_quote(sh)} -c \"echo 'holded-tt: clock tick failed, see journalctl --user -u holded-tt-*'\""
     return {
         TICK_TIMER: nl([
@@ -112,6 +115,7 @@ def render_units(exe: str, plan_at: str = "06:00", notify: str | None = None) ->
         TICK_SERVICE: nl([
             MARKER, "[Unit]", "Description=holded-tt clock tick", *UNIT_RETRY, "",
             "[Service]", "Type=oneshot",
+            f"ExecStartPre={wait_net}",
             f"ExecStart={_quote(exe)} clock tick --schedule", *SERVICE_RETRY, "",
             "[Install]", "WantedBy=default.target", "",
         ]),
