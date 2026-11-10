@@ -79,6 +79,13 @@ def test_service_and_armed_timers_share_one_retry_policy() -> None:
         assert f"--property={prop}" in armed  # and every timer that --schedule arms
 
 
+def test_service_waits_for_dns_before_ticking_but_never_blocks_it() -> None:
+    service = lines(units.render_units(EXE)[units.TICK_SERVICE])
+
+    pre = next(line for line in service if line.startswith("ExecStartPre="))
+    assert pre.startswith("ExecStartPre=-") and "getent hosts app.holded.com" in pre  # '-': ignore failure
+
+
 def test_missed_clock_in_is_never_retried() -> None:
     service = lines(units.render_units(EXE)[units.TICK_SERVICE])
 
