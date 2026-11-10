@@ -18,6 +18,7 @@ Actual built-in defaults used when `config.toml` is first created:
 - `defaults.pause`: empty list (`[]`)
 - `defaults.jitter`: `0` (no randomisation)
 - `defaults.max_late`: `90` (minutes; used by `clock tick`)
+- `defaults.plan_at`: `06:00` (HH:MM; when the daily timer plans the day, read by `clock install`)
 - `defaults.max_extra`: `15` (minutes; the most extra time worked over the schedule when jitter is on)
 - `defaults.max_pause_extra`: `5` (minutes; how much longer than configured a pause may last when jitter is on)
 
@@ -34,6 +35,7 @@ Examples below are sample values you may want to change, not the shipped default
 | `defaults.pause`         | Default pauses (comma-separated)   | `14:00-14:30`        |
 | `defaults.jitter`        | Max random minutes on start/end/pause, `0` = off | `15`   |
 | `defaults.max_late`      | `clock tick` skips a clock-in later than this (minutes) | `90` |
+| `defaults.plan_at`       | Time the daily timer plans the day (HH:MM, Mon-Fri). Run `clock install` again to apply it; `clock install --plan-at` overrides it once | `08:00` |
 | `defaults.max_extra`     | Ceiling on extra minutes worked over the schedule with jitter on | `15` |
 | `defaults.max_pause_extra` | Minutes a pause may last longer than configured with jitter on (the day grows by the same) | `5` |
 | `defaults.<day>.<field>` | Per-weekday override (see below)   | `defaults.fri.end 15:00` |

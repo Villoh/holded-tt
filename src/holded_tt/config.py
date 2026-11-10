@@ -26,6 +26,8 @@ class AppConfig:
     max_pause_extra: int = 5
     # `clock tick`: skip today's clock-in if it is more than this many minutes late.
     max_late: int = 90
+    # `clock install`: time (HH:MM, Mon-Fri) the daily timer plans the day. Reinstall to apply.
+    plan_at: str = "06:00"
     pause: list[str] = field(default_factory=list)
     # Per-weekday overrides, e.g. {"fri": {"end": "15:00"}}; unset fields use the base.
     days: dict[str, dict[str, str | list[str]]] = field(default_factory=dict)

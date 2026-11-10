@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from holded_tt import units
+from holded_tt.config import AppConfig
 from holded_tt.errors import HoldedCliError, InputError
 
 EXE = "/etc/profiles/per-user/me/bin/holded-tt"
@@ -281,10 +282,10 @@ def test_unit_dir_follows_xdg_config_home(monkeypatch, tmp_path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _cli(monkeypatch, install=None, uninstall=None, exe=EXE):
+def _cli(monkeypatch, install=None, uninstall=None, exe=EXE, config=None):
     cli = importlib.import_module("holded_tt.cli")
     clock = importlib.import_module("holded_tt.commands.clock")
-    monkeypatch.setattr(cli, "create_app_state", lambda: SimpleNamespace())
+    monkeypatch.setattr(cli, "create_app_state", lambda: SimpleNamespace(config=AppConfig(**(config or {}))))
     monkeypatch.setattr(clock, "executable", lambda: exe)
     if install:
         monkeypatch.setattr(clock.timers, "install", install)
@@ -315,6 +316,16 @@ def test_install_command_defaults_to_0600_plan_time(runner, monkeypatch) -> None
     runner.invoke(cli.app, ["clock", "install"])
 
     assert seen == {"p": "06:00", "d": False}
+
+
+def test_install_command_uses_the_configured_plan_time_unless_the_flag_is_given(runner, monkeypatch) -> None:
+    seen = []
+    cli = _cli(monkeypatch, install=lambda exe, plan_at, dry_run: seen.append(plan_at) or [], config={"plan_at": "08:00"})
+
+    runner.invoke(cli.app, ["clock", "install"])
+    runner.invoke(cli.app, ["clock", "install", "--plan-at", "07:30"])
+
+    assert seen == ["08:00", "07:30"]
 
 
 def test_install_command_failure_exits_with_the_error_code(runner, monkeypatch) -> None:
